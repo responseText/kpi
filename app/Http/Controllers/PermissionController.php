@@ -43,12 +43,22 @@ class PermissionController extends Controller implements HasMiddleware
     public function update(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([
+            'is_super_admin' => ['nullable', 'boolean'],
             'permissions' => ['array'],
             'permissions.*.can_view' => ['nullable', 'boolean'],
             'permissions.*.can_create' => ['nullable', 'boolean'],
             'permissions.*.can_edit' => ['nullable', 'boolean'],
             'permissions.*.can_delete' => ['nullable', 'boolean'],
         ]);
+
+        $isSuperAdmin = (bool) ($validated['is_super_admin'] ?? false);
+
+        // ป้องกันถอนสิทธิ์ super admin ของตัวเอง
+        if ($user->id === auth()->id() && ! $isSuperAdmin && $user->is_super_admin) {
+            return back()->with('error', 'ไม่สามารถถอนสิทธิ์ผู้ดูแลระบบสูงสุดของตัวเองได้');
+        }
+
+        $user->update(['is_super_admin' => $isSuperAdmin]);
 
         // เมนูทั้งหมดของระบบ เพื่อให้ลบสิทธิ์ที่ไม่ติ๊กออกด้วย
         $rows = [];

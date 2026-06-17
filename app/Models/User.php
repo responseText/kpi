@@ -28,6 +28,7 @@ class User extends Authenticatable
         'subdivision_id',
         'password',
         'status',
+        'is_super_admin',
     ];
 
     /**
@@ -53,6 +54,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
         ];
     }
 
@@ -105,6 +107,11 @@ class User extends Authenticatable
     /** ตรวจสิทธิ์ต่อเมนู+action เช่น can('kpi.indicator', 'edit') */
     public function canMenu(string $menuCode, string $action = 'view'): bool
     {
+        // ผู้ดูแลระบบสูงสุดผ่านทุก action ทุกเมนูโดยอัตโนมัติ
+        if ($this->is_super_admin) {
+            return true;
+        }
+
         $perm = $this->loadedPermissions()[$menuCode] ?? null;
         if (! $perm) {
             return false;

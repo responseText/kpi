@@ -14,7 +14,7 @@
                     <tr>
                         <th class="px-5 py-3">ผู้ใช้</th>
                         <th class="px-5 py-3">ชื่อ-สกุล</th>
-                        <th class="px-5 py-3 text-center">เมนูที่เข้าถึงได้</th>
+                        <th class="px-5 py-3 text-center">ระดับสิทธิ์</th>
                         <th class="px-5 py-3 text-right">จัดการ</th>
                     </tr>
                 </thead>
@@ -23,7 +23,16 @@
                         <tr class="hover:bg-slate-50">
                             <td class="px-5 py-3 font-medium text-slate-700">{{ $u->name }}</td>
                             <td class="px-5 py-3 text-slate-600">{{ $u->display_name }}</td>
-                            <td class="px-5 py-3 text-center text-slate-600">{{ $u->menu_permissions_count }}</td>
+                            <td class="px-5 py-3 text-center">
+                                @if ($u->is_super_admin)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                                        <x-icon name="star" class="w-3 h-3" />
+                                        ผู้ดูแลระบบสูงสุด
+                                    </span>
+                                @else
+                                    <span class="text-slate-500">{{ $u->menu_permissions_count }} เมนู</span>
+                                @endif
+                            </td>
                             <td class="px-5 py-3 text-right">
                                 <x-btn :href="route('permissions.edit', $u)" variant="ghost"><x-icon name="permission" class="w-4 h-4" /> กำหนดสิทธิ์</x-btn>
                             </td>
