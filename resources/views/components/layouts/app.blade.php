@@ -76,7 +76,11 @@
                     <div class="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
                         {{ auth()->user()->name }}
                     </div>
-                    <form method="POST" action="{{ route('logout') }}">
+                    <a href="{{ route('profile.edit') }}"
+                       class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+                        <x-icon name="user" class="w-4 h-4" /> ข้อมูลส่วนตัว
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}" class="border-t border-slate-100">
                         @csrf
                         <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
                             <x-icon name="logout" class="w-4 h-4" /> ออกจากระบบ

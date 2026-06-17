@@ -7,6 +7,7 @@ use App\Models\KpiResult;
 use App\Models\KpiTarget;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 /**
@@ -122,5 +123,37 @@ class KpiFlowTest extends TestCase
 
         // ผู้ดูแลระบบสูงสุด → เข้าได้เสมอ
         $this->actingAs($this->admin())->get("/results/{$indicator->id}/edit")->assertOk();
+    }
+
+    public function test_user_can_edit_own_profile_and_password(): void
+    {
+        $user = User::where('id', '!=', 1)->where('id', '!=', 2)->firstOrFail();
+
+        // เปิดหน้าข้อมูลส่วนตัวได้ (ไม่ต้องมีสิทธิ์เมนู)
+        $this->actingAs($user)->get('/profile')->assertOk();
+
+        // แก้ไขอีเมลของตัวเอง
+        $this->actingAs($user)->put('/profile', ['email' => 'me.profile@example.com'])
+            ->assertRedirect('/profile');
+        $this->assertEquals('me.profile@example.com', $user->fresh()->email);
+
+        // ตั้งรหัสผ่านที่ทราบค่าไว้สำหรับทดสอบ
+        $user->forceFill(['password' => Hash::make('OldPass12345')])->save();
+
+        // รหัสผ่านปัจจุบันผิด → ถูกปฏิเสธ
+        $this->actingAs($user->fresh())->put('/profile/password', [
+            'current_password' => 'wrong-password',
+            'password' => 'NewPass12345',
+            'password_confirmation' => 'NewPass12345',
+        ])->assertSessionHasErrors('current_password');
+        $this->assertTrue(Hash::check('OldPass12345', $user->fresh()->password));
+
+        // รหัสผ่านปัจจุบันถูก + ยืนยันตรงกัน → เปลี่ยนสำเร็จ
+        $this->actingAs($user->fresh())->put('/profile/password', [
+            'current_password' => 'OldPass12345',
+            'password' => 'NewPass12345',
+            'password_confirmation' => 'NewPass12345',
+        ])->assertRedirect('/profile');
+        $this->assertTrue(Hash::check('NewPass12345', $user->fresh()->password));
     }
 }

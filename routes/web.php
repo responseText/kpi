@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 // ---------------------------------------------------------------------------
@@ -28,6 +29,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/monitor', [DashboardController::class, 'monitor'])
         ->middleware('menu:kpi.dashboard,view')
         ->name('monitor');
+
+    // ข้อมูลส่วนตัว (ทุกผู้ใช้แก้ไขของตัวเองได้ — ไม่ต้องมีสิทธิ์เมนู)
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // CRUD modules จะถูกเพิ่มใน Phase 5
     require __DIR__ . '/kpi.php';
