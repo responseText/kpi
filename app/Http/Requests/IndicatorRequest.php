@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Http\Requests;
+
+use App\Models\KpiIndicator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
+
+class IndicatorRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'sub_strategy_id' => ['required', 'integer', 'exists:kpi_sub_strategies,id'],
+            'level' => ['required', 'in:hospital,province,ministry'],
+            'code' => ['nullable', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:500'],
+            'year_type' => ['required', 'in:buddhist,fiscal'],
+            'year' => ['required', 'integer', 'min:2500', 'max:2700'],
+            'period_type' => ['required', 'in:annual,quarterly'],
+            'unit' => ['nullable', 'string', 'max:50'],
+            'description' => ['nullable', 'string'],
+            'orderby' => ['nullable', 'integer'],
+            'status' => ['required', 'in:enable,disable'],
+            'owners' => ['required', 'array', 'min:1'],
+            'owners.*' => ['integer', 'exists:users,id'],
+            'primary_owner' => ['nullable', 'integer'],
+        ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v) {
+            $primary = $this->input('primary_owner');
+            $owners = (array) $this->input('owners', []);
+            if ($primary && ! in_array((int) $primary, array_map('intval', $owners), true)) {
+                $v->errors()->add('primary_owner', 'ผู้รับผิดชอบหลักต้องเป็นหนึ่งในผู้รับผิดชอบที่เลือก');
+            }
+        });
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'sub_strategy_id' => 'กลยุทธ์',
+            'level' => 'ระดับ',
+            'name' => 'ชื่อตัวชี้วัด',
+            'year_type' => 'แบบปี',
+            'year' => 'ปี',
+            'period_type' => 'รูปแบบการเก็บผลงาน',
+            'owners' => 'ผู้รับผิดชอบ',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'owners.required' => 'ต้องเลือกผู้รับผิดชอบอย่างน้อย 1 คน',
+            'owners.min' => 'ต้องเลือกผู้รับผิดชอบอย่างน้อย 1 คน',
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'orderby' => $this->orderby ?: 0,
+            'status' => $this->status ?: 'enable',
+        ]);
+    }
+}

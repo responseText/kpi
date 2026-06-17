@@ -1,0 +1,16 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source "../**/*.blade.php";
+@source "../**/*.js";
+@source "../**/*.vue";
+
+@theme {
+    --font-sans: 'Sarabun', 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* ปรับ scrollbar ของ sidebar ให้บางลง */
+.thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .5); border-radius: 9999px; }
