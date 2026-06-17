@@ -1,36 +1,48 @@
 <x-layouts.app title="กำหนดสิทธิ์" header="กำหนดสิทธิ์ผู้ใช้">
-    <div class="max-w-3xl" x-data="{ superAdmin: {{ $user->is_super_admin ? 'true' : 'false' }} }">
+    <div class="max-w-3xl">
         <x-card :title="$user->display_name" :subtitle="'ชื่อผู้ใช้: ' . $user->name">
-            <form method="POST" action="{{ route('permissions.update', $user) }}">
-                @csrf
-                @method('PUT')
 
-                {{-- Super Admin Toggle --}}
-                <div class="mb-6 rounded-xl border-2 p-4 transition-colors"
-                     :class="superAdmin ? 'border-amber-400 bg-amber-50' : 'border-slate-200 bg-slate-50'">
-                    <label class="flex cursor-pointer items-center gap-3">
-                        <input type="hidden" name="is_super_admin" value="0">
-                        <input type="checkbox" name="is_super_admin" value="1"
-                               x-model="superAdmin"
-                               @change="superAdmin = $event.target.checked"
-                               class="h-5 w-5 rounded border-slate-300 text-amber-500 focus:ring-amber-400">
-                        <div>
-                            <span class="font-semibold text-slate-800" :class="superAdmin ? 'text-amber-800' : ''">
-                                ผู้ดูแลระบบสูงสุด (Super Admin)
-                            </span>
-                            <p class="text-xs text-slate-500 mt-0.5">
-                                เมื่อเปิดใช้งาน ผู้ใช้นี้จะมีสิทธิ์เข้าถึงทุกเมนูและทุกการกระทำโดยอัตโนมัติ ไม่ต้องตั้งสิทธิ์รายเมนู
-                            </p>
-                        </div>
-                    </label>
-                </div>
-
-                {{-- Menu Permissions (disabled when super admin) --}}
-                <div :class="superAdmin ? 'opacity-40 pointer-events-none select-none' : ''">
-                    <p class="mb-3 text-sm font-medium text-slate-700" x-show="superAdmin">
-                        (สิทธิ์รายเมนูถูกแทนที่ด้วยสิทธิ์ผู้ดูแลระบบสูงสุด)
+            @if ($user->is_super_admin)
+                {{-- ผู้ดูแลระบบสูงสุด: ล็อก ไม่มีผู้ใดปรับสิทธิ์ได้ --}}
+                <div class="rounded-xl border-2 border-amber-300 bg-amber-50 p-5">
+                    <div class="flex items-center gap-2 text-amber-800">
+                        <x-icon name="star" class="w-5 h-5" />
+                        <span class="font-semibold">ผู้ดูแลระบบสูงสุด</span>
+                    </div>
+                    <p class="mt-2 text-sm text-amber-700">
+                        ผู้ใช้นี้มีสิทธิ์ทุกอย่างในระบบ และไม่สามารถปรับสิทธิ์ได้จากหน้านี้
+                        (กำหนดได้เฉพาะระดับฐานข้อมูล/ผู้ติดตั้งระบบเท่านั้น)
                     </p>
+                </div>
+                <div class="mt-6">
+                    <x-btn :href="route('permissions.index')" variant="secondary">กลับ</x-btn>
+                </div>
+            @else
+                <form method="POST" action="{{ route('permissions.update', $user) }}"
+                      x-data="{ levelId: '{{ old('kpi_level_id', $user->kpi_level_id) }}', levels: {{ Illuminate\Support\Js::from($levels->keyBy('id')->map->only(['name', 'description'])) }} }">
+                    @csrf
+                    @method('PUT')
 
+                    {{-- บทบาท/ระดับสิทธิ์ --}}
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">บทบาทในระบบ KPI</label>
+                        <select name="kpi_level_id" x-model="levelId"
+                                class="w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">— ไม่มีบทบาทพิเศษ (ใช้สิทธิ์รายเมนูด้านล่าง) —</option>
+                            @foreach ($levels as $level)
+                                <option value="{{ $level->id }}" @selected((string) old('kpi_level_id', $user->kpi_level_id) === (string) $level->id)>
+                                    {{ $level->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1.5 text-xs text-slate-500" x-show="levelId && levels[levelId]"
+                           x-text="levels[levelId]?.description"></p>
+                        <p class="mt-1.5 text-xs text-slate-400" x-show="!levelId">
+                            บทบาทควบคุมขอบเขตการจัดการข้อมูล (เช่น การบันทึกผล) ส่วนสิทธิ์รายเมนูด้านล่างควบคุมการเข้าถึงเมนู
+                        </p>
+                    </div>
+
+                    {{-- สิทธิ์รายเมนู --}}
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-slate-200 text-sm">
                             <thead class="bg-slate-50 text-xs uppercase text-slate-500">
@@ -50,7 +62,7 @@
                                         @foreach (['can_view' => 'view', 'can_create' => 'create', 'can_edit' => 'edit', 'can_delete' => 'delete'] as $field => $a)
                                             <td class="px-4 py-3 text-center">
                                                 <input type="checkbox" name="permissions[{{ $menu->id }}][{{ $field }}]" value="1"
-                                                    @checked($perm?->{$field} || $user->is_super_admin)
+                                                    @checked($perm?->{$field})
                                                     class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                                             </td>
                                         @endforeach
@@ -59,13 +71,13 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
 
-                <div class="mt-6 flex items-center gap-2">
-                    <x-btn type="submit" variant="primary">บันทึกสิทธิ์</x-btn>
-                    <x-btn :href="route('permissions.index')" variant="secondary">ยกเลิก</x-btn>
-                </div>
-            </form>
+                    <div class="mt-6 flex items-center gap-2">
+                        <x-btn type="submit" variant="primary">บันทึกสิทธิ์</x-btn>
+                        <x-btn :href="route('permissions.index')" variant="secondary">ยกเลิก</x-btn>
+                    </div>
+                </form>
+            @endif
         </x-card>
     </div>
 </x-layouts.app>

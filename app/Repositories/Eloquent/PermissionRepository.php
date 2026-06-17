@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Eloquent;
 
+use App\Models\KpiLevel;
 use App\Models\Menu;
 use App\Models\User;
 use App\Models\UserOnMenu;
@@ -14,12 +15,22 @@ class PermissionRepository implements PermissionRepositoryInterface
     public function paginateUsers(?string $search, int $perPage = 30): LengthAwarePaginator
     {
         return User::query()
-            ->with('employee')
+            ->with(['employee', 'kpiLevel'])
             ->withCount('menuPermissions')
             ->when($search, fn ($q, $v) => $q->where('name', 'like', "%{$v}%"))
             ->orderBy('name')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    public function assignableLevels(): Collection
+    {
+        // ผู้ดูแลระบบสูงสุดกำหนดผ่าน UI ไม่ได้ (bootstrap ผ่าน seeder/DB เท่านั้น)
+        return KpiLevel::query()
+            ->enabled()
+            ->where('code', '!=', KpiLevel::SUPER_ADMIN)
+            ->orderBy('orderby')
+            ->get();
     }
 
     public function menus(string $system = 'kpi'): Collection
@@ -48,6 +59,7 @@ class PermissionRepository implements PermissionRepositoryInterface
             UserOnMenu::updateOrCreate(
                 ['user_id' => $userId, 'menu_id' => $menuId],
                 [
+                    'alias_system' => 'kpi',
                     'can_view' => (bool) ($flags['can_view'] ?? false),
                     'can_create' => (bool) ($flags['can_create'] ?? false),
                     'can_edit' => (bool) ($flags['can_edit'] ?? false),

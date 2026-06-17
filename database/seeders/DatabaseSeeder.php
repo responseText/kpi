@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             MenuSeeder::class,
+            KpiLevelSeeder::class,
             PermissionSeeder::class,
         ]);
     }

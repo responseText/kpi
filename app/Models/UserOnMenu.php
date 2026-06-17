@@ -13,7 +13,7 @@ class UserOnMenu extends Model
     protected $table = 'users_on_menu';
 
     protected $fillable = [
-        'user_id', 'menu_id', 'can_view', 'can_create', 'can_edit', 'can_delete',
+        'user_id', 'alias_system', 'menu_id', 'can_view', 'can_create', 'can_edit', 'can_delete',
     ];
 
     protected $casts = [

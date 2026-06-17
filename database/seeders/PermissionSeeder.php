@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\KpiLevel;
 use App\Models\Menu;
 use App\Models\User;
 use App\Models\UserOnMenu;
@@ -9,7 +10,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * ตั้งสิทธิ์เริ่มต้น:
- * - user id=1 (admin) → ผู้ดูแลระบบสูงสุด (is_super_admin = true)
+ * - user id=1 (admin) → ผู้ดูแลระบบสูงสุด (is_super_admin = true + บทบาท super_admin)
  * - user id=2 (dogtorart) → สิทธิ์เต็มรายเมนู (ไม่ใช่ super admin)
  */
 class PermissionSeeder extends Seeder
@@ -17,7 +18,11 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         // id=1 เป็น super admin — ไม่ต้องตั้งรายเมนู
-        User::where('id', 1)->update(['is_super_admin' => true]);
+        $superLevelId = KpiLevel::where('code', KpiLevel::SUPER_ADMIN)->value('id');
+        User::where('id', 1)->update([
+            'is_super_admin' => true,
+            'kpi_level_id' => $superLevelId,
+        ]);
 
         // id=2 สิทธิ์เต็มรายเมนู
         $menuIds = Menu::system('kpi')->pluck('id');
@@ -25,6 +30,7 @@ class PermissionSeeder extends Seeder
             UserOnMenu::updateOrCreate(
                 ['user_id' => 2, 'menu_id' => $menuId],
                 [
+                    'alias_system' => 'kpi',
                     'can_view'   => true,
                     'can_create' => true,
                     'can_edit'   => true,

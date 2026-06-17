@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KpiLevel;
 use App\Models\User;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 
 class PermissionController extends Controller implements HasMiddleware
@@ -19,8 +19,16 @@ class PermissionController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('menu:kpi.permission,view', only: ['index']),
-            new Middleware('menu:kpi.permission,edit', only: ['edit', 'update']),
+            // เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่กำหนดสิทธิ์ผู้ใช้งานอื่นได้
+            function ($request, $next) {
+                abort_unless(
+                    (bool) $request->user()?->is_super_admin,
+                    403,
+                    'เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่สามารถกำหนดสิทธิ์การใช้งานได้'
+                );
+
+                return $next($request);
+            },
         ];
     }
 
@@ -36,14 +44,20 @@ class PermissionController extends Controller implements HasMiddleware
     {
         $menus = $this->permissions->menus('kpi');
         $current = $this->permissions->permissionsForUser($user->id);
+        $levels = $this->permissions->assignableLevels();
 
-        return view('permissions.edit', compact('user', 'menus', 'current'));
+        return view('permissions.edit', compact('user', 'menus', 'current', 'levels'));
     }
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        // ผู้ดูแลระบบสูงสุดถูกป้องกัน — ไม่มีผู้ใด (รวมถึงตนเอง) ปรับสิทธิ์ได้
+        if ($user->is_super_admin) {
+            return back()->with('error', 'ไม่สามารถปรับสิทธิ์ของผู้ดูแลระบบสูงสุดได้');
+        }
+
         $validated = $request->validate([
-            'is_super_admin' => ['nullable', 'boolean'],
+            'kpi_level_id' => ['nullable', 'integer', 'exists:kpi_level,id'],
             'permissions' => ['array'],
             'permissions.*.can_view' => ['nullable', 'boolean'],
             'permissions.*.can_create' => ['nullable', 'boolean'],
@@ -51,14 +65,17 @@ class PermissionController extends Controller implements HasMiddleware
             'permissions.*.can_delete' => ['nullable', 'boolean'],
         ]);
 
-        $isSuperAdmin = (bool) ($validated['is_super_admin'] ?? false);
+        $levelId = $validated['kpi_level_id'] ?? null;
 
-        // ป้องกันถอนสิทธิ์ super admin ของตัวเอง
-        if ($user->id === auth()->id() && ! $isSuperAdmin && $user->is_super_admin) {
-            return back()->with('error', 'ไม่สามารถถอนสิทธิ์ผู้ดูแลระบบสูงสุดของตัวเองได้');
+        // ห้ามกำหนดบทบาทผู้ดูแลระบบสูงสุดผ่านหน้านี้ (bootstrap ผ่าน seeder/DB เท่านั้น)
+        if ($levelId !== null && KpiLevel::whereKey($levelId)->value('code') === KpiLevel::SUPER_ADMIN) {
+            return back()->with('error', 'ไม่สามารถกำหนดบทบาทผู้ดูแลระบบสูงสุดผ่านหน้านี้ได้');
         }
 
-        $user->update(['is_super_admin' => $isSuperAdmin]);
+        $user->update([
+            'kpi_level_id' => $levelId,
+            'is_super_admin' => false,
+        ]);
 
         // เมนูทั้งหมดของระบบ เพื่อให้ลบสิทธิ์ที่ไม่ติ๊กออกด้วย
         $rows = [];

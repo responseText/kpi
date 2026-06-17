@@ -29,6 +29,7 @@ class User extends Authenticatable
         'password',
         'status',
         'is_super_admin',
+        'kpi_level_id',
     ];
 
     /**
@@ -62,6 +63,12 @@ class User extends Authenticatable
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+    /** บทบาท/ระดับสิทธิ์ในระบบ KPI */
+    public function kpiLevel(): BelongsTo
+    {
+        return $this->belongsTo(KpiLevel::class, 'kpi_level_id');
     }
 
     /** สิทธิ์เมนูทั้งหมดของผู้ใช้ */
@@ -124,5 +131,55 @@ class User extends Authenticatable
     public function hasMenu(string $menuCode): bool
     {
         return $this->canMenu($menuCode, 'view');
+    }
+
+    /** รหัสบทบาทในระบบ KPI (super_admin / indicator_admin_* / indicator_owner / null) */
+    public function levelCode(): ?string
+    {
+        if ($this->is_super_admin) {
+            return KpiLevel::SUPER_ADMIN;
+        }
+
+        return $this->kpiLevel?->code;
+    }
+
+    /** เป็นผู้ดูแลตัวชี้วัด (รายระดับหรือทั้งหมด) หรือไม่ */
+    public function isIndicatorAdmin(): bool
+    {
+        return in_array($this->kpiLevel?->code, KpiLevel::INDICATOR_ADMINS, true);
+    }
+
+    /** ขอบเขตของผู้ดูแลตัวชี้วัด: all|hospital|province|ministry|null */
+    public function indicatorAdminScope(): ?string
+    {
+        return $this->isIndicatorAdmin() ? $this->kpiLevel?->scope : null;
+    }
+
+    /** จัดการข้อมูลตัวชี้วัดระดับนี้ได้หรือไม่ (super admin / ผู้ดูแลทั้งหมด / ผู้ดูแลระดับตรงกัน) */
+    public function canManageIndicatorLevel(string $level): bool
+    {
+        if ($this->is_super_admin) {
+            return true;
+        }
+
+        $scope = $this->indicatorAdminScope();
+
+        return $scope === KpiLevel::SCOPE_ALL || $scope === $level;
+    }
+
+    /** เป็นผู้รับผิดชอบ (owner) ของตัวชี้วัดนี้หรือไม่ */
+    public function isOwnerOf(KpiIndicator $indicator): bool
+    {
+        return $indicator->owners()->whereKey($this->getKey())->exists();
+    }
+
+    /**
+     * มีสิทธิ์บันทึกผลของตัวชี้วัดนี้หรือไม่
+     * - ผู้ดูแลระบบสูงสุด / ผู้ดูแลตัวชี้วัดทั้งหมด / ผู้ดูแลระดับที่ตรงกับระดับตัวชี้วัด
+     * - หรือเป็นผู้รับผิดชอบของตัวชี้วัดนั้น
+     */
+    public function canRecordResultFor(KpiIndicator $indicator): bool
+    {
+        return $this->canManageIndicatorLevel($indicator->level) || $this->isOwnerOf($indicator);
     }
 }

@@ -14,6 +14,9 @@ interface PermissionRepositoryInterface
     /** เมนูทั้งหมดของระบบ (เรียงลำดับ) */
     public function menus(string $system = 'kpi'): Collection;
 
+    /** ระดับสิทธิ์ที่กำหนดให้ผู้ใช้ผ่าน UI ได้ (ไม่รวมผู้ดูแลระบบสูงสุด) */
+    public function assignableLevels(): Collection;
+
     /** สิทธิ์ทั้งหมดของผู้ใช้คนหนึ่ง key by menu_id */
     public function permissionsForUser(int $userId): Collection;
 

@@ -52,7 +52,11 @@
                             <td class="px-5 py-3 text-slate-600">{{ $ind->level_label }}</td>
                             <td class="px-5 py-3 text-center text-slate-600">{{ $done }}/{{ $total }} ช่วง</td>
                             <td class="px-5 py-3 text-right">
-                                <x-btn :href="route('results.edit', $ind)" variant="ghost"><x-icon name="result" class="w-4 h-4" /> บันทึกผล</x-btn>
+                                @if (auth()->user()->canRecordResultFor($ind))
+                                    <x-btn :href="route('results.edit', $ind)" variant="ghost"><x-icon name="result" class="w-4 h-4" /> บันทึกผล</x-btn>
+                                @else
+                                    <span class="text-xs text-slate-400">ไม่มีสิทธิ์บันทึก</span>
+                                @endif
                             </td>
                         </tr>
                     @empty

@@ -26,8 +26,14 @@ class PermissionService
     {
         $menus = Menu::system($system)->enabled()->orderBy('orderby')->get();
 
-        // เฉพาะเมนูที่ผู้ใช้ดูได้
-        $visible = $menus->filter(fn (Menu $m) => $user->hasMenu($m->code));
+        // เมนูกำหนดสิทธิ์: เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่เห็น
+        $visible = $menus->filter(function (Menu $m) use ($user) {
+            if ($m->code === 'kpi.permission' && ! $user->is_super_admin) {
+                return false;
+            }
+
+            return $user->hasMenu($m->code);
+        });
 
         $byParent = $visible->groupBy(fn (Menu $m) => $m->parent_id ?? 0);
 

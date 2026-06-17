@@ -90,4 +90,37 @@ class KpiFlowTest extends TestCase
         $this->actingAs($plainUser)->get('/indicators')->assertForbidden();
         $this->actingAs($plainUser)->get('/permissions')->assertForbidden();
     }
+
+    public function test_result_recording_restricted_to_owner_or_admin(): void
+    {
+        // เตรียมตัวชี้วัดระดับโรงพยาบาล
+        $strategy = \App\Models\KpiStrategy::create([
+            'year' => 2569, 'code' => 'RT', 'name' => 'ยุทธศาสตร์สิทธิ์ผล', 'status' => 'enable',
+        ]);
+        $sub = \App\Models\KpiSubStrategy::create([
+            'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์สิทธิ์ผล', 'status' => 'enable',
+        ]);
+        $indicator = KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'hospital', 'name' => 'ตัวชี้วัดสิทธิ์ผล',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+
+        // ให้สิทธิ์เมนู "บันทึกผลงาน" แก่ผู้ใช้ทั่วไป แต่ยังไม่ใช่ผู้รับผิดชอบ
+        $stranger = User::where('id', '!=', 1)->where('id', '!=', 2)->firstOrFail();
+        $resultMenu = \App\Models\Menu::where('code', 'kpi.result')->firstOrFail();
+        \App\Models\UserOnMenu::updateOrCreate(
+            ['user_id' => $stranger->id, 'menu_id' => $resultMenu->id],
+            ['alias_system' => 'kpi', 'can_view' => true, 'can_edit' => true],
+        );
+
+        // ไม่ใช่ผู้รับผิดชอบ + ไม่มีบทบาทผู้ดูแล → 403
+        $this->actingAs($stranger)->get("/results/{$indicator->id}/edit")->assertForbidden();
+
+        // เป็นผู้รับผิดชอบของตัวชี้วัดนี้ → เข้าได้
+        $indicator->owners()->attach($stranger->id, ['is_primary' => false]);
+        $this->actingAs($stranger->fresh())->get("/results/{$indicator->id}/edit")->assertOk();
+
+        // ผู้ดูแลระบบสูงสุด → เข้าได้เสมอ
+        $this->actingAs($this->admin())->get("/results/{$indicator->id}/edit")->assertOk();
+    }
 }

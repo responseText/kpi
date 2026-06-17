@@ -46,8 +46,10 @@ class ResultController extends Controller implements HasMiddleware
         return view('results.index', compact('indicators', 'years', 'filters'));
     }
 
-    public function edit(KpiIndicator $indicator): View
+    public function edit(Request $request, KpiIndicator $indicator): View
     {
+        $this->authorizeRecord($request, $indicator);
+
         $this->targets->syncPeriods($indicator);
         $indicator->load('targets.result.recorder');
 
@@ -56,6 +58,8 @@ class ResultController extends Controller implements HasMiddleware
 
     public function update(ResultRequest $request, KpiIndicator $indicator): RedirectResponse
     {
+        $this->authorizeRecord($request, $indicator);
+
         $rows = $request->validated()['results'];
         $userId = (int) $request->user()->id;
 
@@ -85,5 +89,18 @@ class ResultController extends Controller implements HasMiddleware
         });
 
         return redirect()->route('indicators.show', $indicator)->with('success', 'บันทึกผลงานเรียบร้อยแล้ว');
+    }
+
+    /**
+     * เฉพาะผู้รับผิดชอบตัวชี้วัด หรือผู้ดูแล (ระบบสูงสุด/ตัวชี้วัดทั้งหมด/ระดับที่ตรงกัน) เท่านั้น
+     * ที่บันทึกผลของตัวชี้วัดนี้ได้
+     */
+    private function authorizeRecord(Request $request, KpiIndicator $indicator): void
+    {
+        abort_unless(
+            $request->user()->canRecordResultFor($indicator),
+            403,
+            'คุณไม่มีสิทธิ์บันทึกผลของตัวชี้วัดนี้ (เฉพาะผู้รับผิดชอบหรือผู้ดูแลที่เกี่ยวข้องเท่านั้น)'
+        );
     }
 }

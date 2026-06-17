@@ -7,7 +7,7 @@
             @if ($user->canMenu('kpi.target', 'edit'))
                 <x-btn :href="route('targets.edit', $indicator)" variant="secondary"><x-icon name="target" class="w-4 h-4" /> กำหนดค่าเป้าหมาย</x-btn>
             @endif
-            @if ($user->canMenu('kpi.result', 'edit'))
+            @if ($user->canMenu('kpi.result', 'edit') && $user->canRecordResultFor($indicator))
                 <x-btn :href="route('results.edit', $indicator)" variant="success"><x-icon name="result" class="w-4 h-4" /> บันทึกผลงาน</x-btn>
             @endif
             @if ($user->canMenu('kpi.indicator', 'edit'))
