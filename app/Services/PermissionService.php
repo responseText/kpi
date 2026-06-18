@@ -26,22 +26,33 @@ class PermissionService
     {
         $menus = Menu::system($system)->enabled()->orderBy('orderby')->get();
 
-        // เมนูกำหนดสิทธิ์: เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่เห็น
-        $visible = $menus->filter(function (Menu $m) use ($user) {
-            if ($m->code === 'kpi.permission' && ! $user->is_super_admin) {
-                return false;
-            }
+        $byParent = $menus->groupBy(fn (Menu $m) => $m->parent_id ?? 0);
 
-            return $user->hasMenu($m->code);
-        });
-
-        $byParent = $visible->groupBy(fn (Menu $m) => $m->parent_id ?? 0);
-
-        // เมนูระดับบนสุด พร้อมแนบลูกที่มองเห็นได้
-        return $visible
+        // เมนูระดับบนสุดที่ผู้ใช้มีสิทธิ์ดู — เมนูย่อยสืบทอดสิทธิ์จากเมนูแม่
+        return $menus
             ->whereNull('parent_id')
+            ->filter(function (Menu $m) use ($user) {
+                // แดชบอร์ด / Monitor: เปิดให้ผู้ใช้ทุกคนเห็นเสมอ (ไม่อิงสิทธิ์รายเมนู)
+                if ($m->code === 'kpi.dashboard') {
+                    return true;
+                }
+                // เมนูพิเศษที่ควบคุมด้วยบทบาท (ไม่อิงสิทธิ์รายเมนู)
+                // เฉพาะผู้ดูแลระบบสูงสุด/ผู้ดูแลตัวชี้วัดทั้งหมดเท่านั้นที่เห็น
+                if ($m->code === 'kpi.permission') {
+                    return $user->canManagePermissions();
+                }
+                if ($m->code === 'kpi.level_manager') {
+                    return $user->canManageLevelManagers();
+                }
+                // ตัวชี้วัด + กำหนดค่าเป้าหมาย: เฉพาะผู้ดูแลตัวชี้วัด (ทุกระดับ/ทั้งหมด/รายระดับ)
+                if ($m->code === 'kpi.indicator' || $m->code === 'kpi.target') {
+                    return $user->isIndicatorManager();
+                }
+
+                return $user->hasMenu($m->code);
+            })
             ->map(function (Menu $m) use ($byParent) {
-                $m->setRelation('visibleChildren', $byParent->get($m->id, collect()));
+                $m->setRelation('visibleChildren', $byParent->get($m->id, collect())->values());
 
                 return $m;
             })

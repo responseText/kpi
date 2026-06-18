@@ -29,13 +29,17 @@
                                         <x-icon name="star" class="w-3 h-3" />
                                         ผู้ดูแลระบบสูงสุด
                                     </span>
-                                @elseif ($u->kpiLevel)
-                                    <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                                        {{ $u->kpiLevel->name }}
-                                    </span>
-                                    @if ($u->menu_permissions_count)
-                                        <span class="ml-1 text-xs text-slate-400">· {{ $u->menu_permissions_count }} เมนู</span>
-                                    @endif
+                                @elseif ($u->kpiLevels()->isNotEmpty())
+                                    <div class="flex flex-wrap items-center justify-center gap-1">
+                                        @foreach ($u->kpiLevels() as $lvl)
+                                            <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                                                {{ $lvl->name }}
+                                            </span>
+                                        @endforeach
+                                        @if ($u->menu_permissions_count)
+                                            <span class="text-xs text-slate-400">· {{ $u->menu_permissions_count }} เมนู</span>
+                                        @endif
+                                    </div>
                                 @else
                                     <span class="text-slate-500">{{ $u->menu_permissions_count }} เมนู</span>
                                 @endif

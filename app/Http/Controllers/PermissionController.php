@@ -19,12 +19,12 @@ class PermissionController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            // เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่กำหนดสิทธิ์ผู้ใช้งานอื่นได้
+            // ผู้ดูแลระบบสูงสุด หรือผู้ดูแลตัวชี้วัดทั้งหมด เท่านั้นที่กำหนดสิทธิ์ผู้ใช้งานอื่นได้
             function ($request, $next) {
                 abort_unless(
-                    (bool) $request->user()?->is_super_admin,
+                    (bool) $request->user()?->canManagePermissions(),
                     403,
-                    'เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่สามารถกำหนดสิทธิ์การใช้งานได้'
+                    'คุณไม่มีสิทธิ์กำหนดสิทธิ์การใช้งานของผู้ใช้อื่น'
                 );
 
                 return $next($request);
@@ -57,7 +57,8 @@ class PermissionController extends Controller implements HasMiddleware
         }
 
         $validated = $request->validate([
-            'kpi_level_id' => ['nullable', 'integer', 'exists:kpi_level,id'],
+            'kpi_level_ids' => ['array'],
+            'kpi_level_ids.*' => ['integer', 'exists:kpi_level,id'],
             'permissions' => ['array'],
             'permissions.*.can_view' => ['nullable', 'boolean'],
             'permissions.*.can_create' => ['nullable', 'boolean'],
@@ -65,17 +66,15 @@ class PermissionController extends Controller implements HasMiddleware
             'permissions.*.can_delete' => ['nullable', 'boolean'],
         ]);
 
-        $levelId = $validated['kpi_level_id'] ?? null;
+        $levelIds = $validated['kpi_level_ids'] ?? [];
 
         // ห้ามกำหนดบทบาทผู้ดูแลระบบสูงสุดผ่านหน้านี้ (bootstrap ผ่าน seeder/DB เท่านั้น)
-        if ($levelId !== null && KpiLevel::whereKey($levelId)->value('code') === KpiLevel::SUPER_ADMIN) {
+        if ($levelIds && KpiLevel::whereIn('id', $levelIds)->where('code', KpiLevel::SUPER_ADMIN)->exists()) {
             return back()->with('error', 'ไม่สามารถกำหนดบทบาทผู้ดูแลระบบสูงสุดผ่านหน้านี้ได้');
         }
 
-        $user->update([
-            'kpi_level_id' => $levelId,
-            'is_super_admin' => false,
-        ]);
+        // เก็บบทบาทที่ users_on_level (แยกตามระบบ, ได้หลายบทบาท) — ผ่าน UI กำหนด super admin ไม่ได้
+        $this->permissions->setUserKpiLevels($user->id, $levelIds);
 
         // เมนูทั้งหมดของระบบ เพื่อให้ลบสิทธิ์ที่ไม่ติ๊กออกด้วย
         $rows = [];

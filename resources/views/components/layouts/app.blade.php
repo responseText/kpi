@@ -41,13 +41,30 @@
 
         <nav class="p-3 space-y-1">
             @foreach ($navItems as $item)
-                @php $active = $currentRoute && $item->route && str($currentRoute)->startsWith(str($item->route)->before('.')); @endphp
+                @php
+                    $children = $item->visibleChildren ?? collect();
+                    $active = $currentRoute && $item->route && str($currentRoute)->startsWith(str($item->route)->before('.'));
+                @endphp
                 <a href="{{ $item->route && \Illuminate\Support\Facades\Route::has($item->route) ? route($item->route) : '#' }}"
                    class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition
                           {{ $active ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white' }}">
                     <x-icon :name="$item->icon ?? 'dot'" class="w-5 h-5 shrink-0" />
                     <span>{{ $item->name }}</span>
                 </a>
+
+                @if ($children->isNotEmpty())
+                    <div class="mb-1 ml-4 space-y-0.5 border-l border-white/10 pl-3">
+                        @foreach ($children as $child)
+                            @php $childActive = $currentRoute === $child->route; @endphp
+                            <a href="{{ $child->route && \Illuminate\Support\Facades\Route::has($child->route) ? route($child->route) : '#' }}"
+                               class="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] transition
+                                      {{ $childActive ? 'bg-indigo-500/90 text-white font-medium' : 'text-slate-400 hover:bg-white/10 hover:text-white' }}">
+                                <span class="h-1.5 w-1.5 shrink-0 rounded-full {{ $childActive ? 'bg-white' : 'bg-slate-500' }}"></span>
+                                <span>{{ $child->name }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
             @endforeach
         </nav>
     </aside>

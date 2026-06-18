@@ -11,7 +11,6 @@ use App\Services\KpiEvaluator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 
 class TargetController extends Controller implements HasMiddleware
@@ -25,8 +24,16 @@ class TargetController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('menu:kpi.target,view', only: ['index']),
-            new Middleware('menu:kpi.target,edit', only: ['edit', 'update']),
+            // เฉพาะผู้ดูแลตัวชี้วัด (ระบบสูงสุด/ทั้งหมด/รายระดับ) เท่านั้นที่ใช้เมนูกำหนดค่าเป้าหมายได้
+            function ($request, $next) {
+                abort_unless(
+                    (bool) $request->user()?->isIndicatorManager(),
+                    403,
+                    'คุณไม่มีสิทธิ์ใช้งานเมนูกำหนดค่าเป้าหมาย (เฉพาะผู้ดูแลตัวชี้วัดเท่านั้น)'
+                );
+
+                return $next($request);
+            },
         ];
     }
 
@@ -38,14 +45,17 @@ class TargetController extends Controller implements HasMiddleware
             'search' => $request->string('search')->toString() ?: null,
         ];
 
-        $indicators = $this->indicators->paginateFiltered(array_filter($filters));
+        // แสดงเฉพาะตัวชี้วัดในระดับที่ผู้ใช้เป็นผู้ดูแลเท่านั้น
+        $indicators = $this->indicators->paginateManageableLevels(array_filter($filters), $request->user());
         $years = $this->strategies->availableYears();
 
         return view('targets.index', compact('indicators', 'years', 'filters'));
     }
 
-    public function edit(KpiIndicator $indicator): View
+    public function edit(Request $request, KpiIndicator $indicator): View
     {
+        $this->authorizeLevel($request, $indicator);
+
         $this->targets->syncPeriods($indicator);          // กันกรณีช่วงเวลายังไม่ถูกสร้าง
         $indicator->load('targets');
         $operators = KpiEvaluator::LABELS;
@@ -55,8 +65,23 @@ class TargetController extends Controller implements HasMiddleware
 
     public function update(TargetRequest $request, KpiIndicator $indicator): RedirectResponse
     {
+        $this->authorizeLevel($request, $indicator);
+
         $this->targets->saveTargets($indicator, $request->validated()['targets']);
 
         return redirect()->route('indicators.show', $indicator)->with('success', 'บันทึกค่าเป้าหมายเรียบร้อยแล้ว');
+    }
+
+    /**
+     * อนุญาตเฉพาะผู้ดูแลที่ครอบคลุมระดับของตัวชี้วัดนี้
+     * (ผู้ดูแลระบบสูงสุด/ผู้ดูแลตัวชี้วัดทั้งหมด ผ่านทุกระดับ; ผู้ดูแลระดับ ผ่านเฉพาะระดับของตน)
+     */
+    private function authorizeLevel(Request $request, KpiIndicator $indicator): void
+    {
+        abort_unless(
+            $request->user()->canManageIndicatorLevel($indicator->level),
+            403,
+            'คุณไม่มีสิทธิ์กำหนดค่าเป้าหมายของตัวชี้วัดระดับนี้ (เฉพาะผู้ดูแลระดับที่เกี่ยวข้องเท่านั้น)'
+        );
     }
 }

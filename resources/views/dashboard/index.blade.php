@@ -1,6 +1,26 @@
 @php use App\Models\KpiIndicator; @endphp
+@php $levelName = $level ? KpiIndicator::LEVELS[$level] : 'ทุกระดับ'; @endphp
 
-<x-layouts.app title="แดชบอร์ด" header="แดชบอร์ดตัวชี้วัด">
+<x-layouts.app title="แดชบอร์ด" :header="'แดชบอร์ดตัวชี้วัด · ' . $levelName">
+    {{-- แท็บเลือกระดับ --}}
+    @php
+        $tabs = [
+            ['label' => 'ทั้งหมด',     'route' => 'dashboard',          'on' => $level === null],
+            ['label' => 'กระทรวง',     'route' => 'dashboard.ministry', 'on' => $level === 'ministry'],
+            ['label' => 'จังหวัด',      'route' => 'dashboard.province', 'on' => $level === 'province'],
+            ['label' => 'โรงพยาบาล',   'route' => 'dashboard.hospital', 'on' => $level === 'hospital'],
+        ];
+    @endphp
+    <div class="mb-4 flex flex-wrap gap-1.5">
+        @foreach ($tabs as $t)
+            <a href="{{ route($t['route'], ['year' => $year]) }}"
+               class="rounded-lg px-3 py-1.5 text-sm font-medium transition
+                      {{ $t['on'] ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50' }}">
+                {{ $t['label'] }}
+            </a>
+        @endforeach
+    </div>
+
     {{-- ตัวกรองปี + ลิงก์ Monitor --}}
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
         <form method="GET" class="flex items-center gap-2">
@@ -15,7 +35,7 @@
             </select>
         </form>
 
-        <a href="{{ route('monitor', ['year' => $year]) }}" target="_blank"
+        <a href="{{ route('monitor', array_filter(['year' => $year, 'level' => $level])) }}" target="_blank"
            class="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900">
             <x-icon name="dashboard" class="w-4 h-4" /> เปิดโหมด Monitor (ทีวี)
         </a>
@@ -23,11 +43,10 @@
 
     {{-- การ์ดสรุปตามระดับ --}}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        @foreach (KpiIndicator::LEVELS as $key => $levelName)
-            @php $s = $summary[$key]; @endphp
+        @foreach ($summary as $key => $s)
             <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-semibold text-slate-700">{{ $levelName }}</h3>
+                    <h3 class="font-semibold text-slate-700">{{ KpiIndicator::LEVELS[$key] ?? $key }}</h3>
                     <span class="text-2xl font-bold text-slate-800">{{ $s['total'] }}</span>
                 </div>
                 <div class="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -68,11 +87,12 @@
         </x-card>
 
         <x-card title="สัดส่วนรายระดับ" class="lg:col-span-2">
+            @php $chartLabels = array_map(fn ($k) => KpiIndicator::LEVELS[$k] ?? $k, array_keys($summary)); @endphp
             <canvas id="levelChart"
-                data-labels="{{ json_encode(array_values(\App\Models\KpiIndicator::LEVELS), JSON_UNESCAPED_UNICODE) }}"
-                data-pass="{{ json_encode(array_column($summary, 'pass')) }}"
-                data-fail="{{ json_encode(array_column($summary, 'fail')) }}"
-                data-pending="{{ json_encode(array_column($summary, 'pending')) }}"
+                data-labels="{{ json_encode(array_values($chartLabels), JSON_UNESCAPED_UNICODE) }}"
+                data-pass="{{ json_encode(array_values(array_column($summary, 'pass'))) }}"
+                data-fail="{{ json_encode(array_values(array_column($summary, 'fail'))) }}"
+                data-pending="{{ json_encode(array_values(array_column($summary, 'pending'))) }}"
                 style="max-height: 240px;"></canvas>
         </x-card>
     </div>
@@ -109,7 +129,7 @@
     {{-- ตารางตัวชี้วัด --}}
     <div class="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         <div class="border-b border-slate-200 px-5 py-3">
-            <h3 class="font-semibold text-slate-700">รายการตัวชี้วัด ปี {{ $year }}</h3>
+            <h3 class="font-semibold text-slate-700">รายการตัวชี้วัด ({{ $levelName }}) ปี {{ $year }}</h3>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">

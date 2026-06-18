@@ -39,9 +39,10 @@ class KpiLevel extends Model
         'orderby' => 'integer',
     ];
 
-    public function users(): HasMany
+    /** การมอบหมายบทบาทนี้ให้ผู้ใช้ (ผ่าน users_on_level) */
+    public function assignments(): HasMany
     {
-        return $this->hasMany(User::class, 'kpi_level_id');
+        return $this->hasMany(UserOnLevel::class, 'level_id');
     }
 
     public function scopeEnabled($query)

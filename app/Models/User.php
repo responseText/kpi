@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 class User extends Authenticatable
 {
@@ -28,8 +29,6 @@ class User extends Authenticatable
         'subdivision_id',
         'password',
         'status',
-        'is_super_admin',
-        'kpi_level_id',
     ];
 
     /**
@@ -55,7 +54,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'is_super_admin' => 'boolean',
         ];
     }
 
@@ -65,10 +63,28 @@ class User extends Authenticatable
         return $this->belongsTo(Employee::class, 'employee_id');
     }
 
-    /** บทบาท/ระดับสิทธิ์ในระบบ KPI */
-    public function kpiLevel(): BelongsTo
+    /** แถวบทบาทของผู้ใช้ในระบบ KPI (1 ผู้ใช้มีได้หลายบทบาท — เก็บที่ users_on_level แยกตามระบบ) */
+    public function kpiLevelRows(): HasMany
     {
-        return $this->belongsTo(KpiLevel::class, 'kpi_level_id');
+        return $this->hasMany(UserOnLevel::class, 'user_id')->where('alias_system', 'kpi');
+    }
+
+    /** เป็นผู้ดูแลระบบสูงสุดของระบบ KPI หรือไม่ (แถวใดแถวหนึ่งเป็น super admin) */
+    public function getIsSuperAdminAttribute(): bool
+    {
+        return $this->kpiLevelRows->contains(fn (UserOnLevel $r) => $r->is_super_admin);
+    }
+
+    /** ระดับสิทธิ์ KPI ทั้งหมดของผู้ใช้ (KpiLevel) */
+    public function kpiLevels(): Collection
+    {
+        return $this->kpiLevelRows->map->level->filter()->values();
+    }
+
+    /** id ของระดับสิทธิ์ KPI ทั้งหมด (ไม่รวมแถว super admin ที่ไม่มี level) */
+    public function kpiLevelIds(): array
+    {
+        return $this->kpiLevelRows->pluck('level_id')->filter()->unique()->values()->all();
     }
 
     /** สิทธิ์เมนูทั้งหมดของผู้ใช้ */
@@ -133,38 +149,85 @@ class User extends Authenticatable
         return $this->canMenu($menuCode, 'view');
     }
 
-    /** รหัสบทบาทในระบบ KPI (super_admin / indicator_admin_* / indicator_owner / null) */
-    public function levelCode(): ?string
+    /** สิทธิ์ระดับบนสุดของระบบ KPI: ผู้ดูแลระบบสูงสุด หรือผู้ดูแลตัวชี้วัดทั้งหมด */
+    public function isTopAdmin(): bool
     {
+        return $this->is_super_admin || in_array(KpiLevel::ADMIN_ALL, $this->levelCodes(), true);
+    }
+
+    /** มีสิทธิ์เข้าใช้เมนู "สิทธิ์ผู้ใช้งาน" เพื่อกำหนดสิทธิ์ให้ผู้อื่น */
+    public function canManagePermissions(): bool
+    {
+        return $this->isTopAdmin();
+    }
+
+    /** มีสิทธิ์เข้าใช้เมนู "ผู้รับผิดชอบระดับ" (เฉพาะผู้ดูแลระบบสูงสุด/ผู้ดูแลตัวชี้วัดทั้งหมด) */
+    public function canManageLevelManagers(): bool
+    {
+        return $this->isTopAdmin();
+    }
+
+    /** รหัสบทบาททั้งหมดในระบบ KPI (รวม super_admin ถ้ามี) */
+    public function levelCodes(): array
+    {
+        $codes = $this->kpiLevels()->pluck('code')->all();
+
         if ($this->is_super_admin) {
-            return KpiLevel::SUPER_ADMIN;
+            $codes[] = KpiLevel::SUPER_ADMIN;
         }
 
-        return $this->kpiLevel?->code;
+        return array_values(array_unique($codes));
     }
 
-    /** เป็นผู้ดูแลตัวชี้วัด (รายระดับหรือทั้งหมด) หรือไม่ */
+    /** เป็นผู้ดูแลตัวชี้วัด (รายระดับหรือทั้งหมด) อย่างน้อยหนึ่งบทบาทหรือไม่ */
     public function isIndicatorAdmin(): bool
     {
-        return in_array($this->kpiLevel?->code, KpiLevel::INDICATOR_ADMINS, true);
+        return (bool) array_intersect($this->levelCodes(), KpiLevel::INDICATOR_ADMINS);
     }
 
-    /** ขอบเขตของผู้ดูแลตัวชี้วัด: all|hospital|province|ministry|null */
-    public function indicatorAdminScope(): ?string
+    /** ขอบเขตของบทบาทผู้ดูแลตัวชี้วัดทั้งหมด: ชุดของ all|hospital|province|ministry */
+    public function indicatorAdminScopes(): array
     {
-        return $this->isIndicatorAdmin() ? $this->kpiLevel?->scope : null;
+        return $this->kpiLevels()
+            ->filter(fn (KpiLevel $l) => in_array($l->code, KpiLevel::INDICATOR_ADMINS, true))
+            ->pluck('scope')->filter()->unique()->values()->all();
     }
 
-    /** จัดการข้อมูลตัวชี้วัดระดับนี้ได้หรือไม่ (super admin / ผู้ดูแลทั้งหมด / ผู้ดูแลระดับตรงกัน) */
+    /** จัดการข้อมูลตัวชี้วัดระดับนี้ได้หรือไม่ (super admin / ผู้ดูแลทั้งหมด / ผู้ดูแลระดับที่ครอบคลุม) */
     public function canManageIndicatorLevel(string $level): bool
     {
         if ($this->is_super_admin) {
             return true;
         }
 
-        $scope = $this->indicatorAdminScope();
+        $scopes = $this->indicatorAdminScopes();
 
-        return $scope === KpiLevel::SCOPE_ALL || $scope === $level;
+        return in_array(KpiLevel::SCOPE_ALL, $scopes, true) || in_array($level, $scopes, true);
+    }
+
+    /** จัดการตัวชี้วัดได้ทุกระดับหรือไม่ (ผู้ดูแลระบบสูงสุด หรือผู้ดูแลตัวชี้วัดทั้งหมด) */
+    public function canManageAllIndicatorLevels(): bool
+    {
+        return $this->is_super_admin
+            || in_array(KpiLevel::SCOPE_ALL, $this->indicatorAdminScopes(), true);
+    }
+
+    /** ระดับตัวชี้วัดที่ผู้ใช้เป็นผู้ดูแลระดับนั้นโดยเฉพาะ (hospital/province/ministry — ไม่รวม 'all') */
+    public function manageableIndicatorLevels(): array
+    {
+        return array_values(array_filter(
+            $this->indicatorAdminScopes(),
+            fn (string $scope) => $scope !== KpiLevel::SCOPE_ALL
+        ));
+    }
+
+    /**
+     * เป็นผู้ดูแลตัวชี้วัดหรือไม่ (ผู้ดูแลระบบสูงสุด / ผู้ดูแลตัวชี้วัดทั้งหมด / ผู้ดูแลรายระดับ)
+     * ใช้เป็นด่านเข้าเมนู "ตัวชี้วัด" และ "กำหนดค่าเป้าหมาย"
+     */
+    public function isIndicatorManager(): bool
+    {
+        return $this->is_super_admin || $this->isIndicatorAdmin();
     }
 
     /** เป็นผู้รับผิดชอบ (owner) ของตัวชี้วัดนี้หรือไม่ */
@@ -181,5 +244,25 @@ class User extends Authenticatable
     public function canRecordResultFor(KpiIndicator $indicator): bool
     {
         return $this->canManageIndicatorLevel($indicator->level) || $this->isOwnerOf($indicator);
+    }
+
+    /** เห็น/บันทึกผลตัวชี้วัดได้ทุกตัวหรือไม่ (ผู้ดูแลระบบสูงสุด หรือผู้ดูแลตัวชี้วัดทั้งหมด) */
+    public function canRecordAllIndicators(): bool
+    {
+        return $this->canManageAllIndicatorLevels();
+    }
+
+    /** ระดับตัวชี้วัดที่ผู้ใช้เป็นผู้ดูแลระดับนั้น (hospital/province/ministry — ไม่รวม 'all') */
+    public function recordableAdminLevels(): array
+    {
+        return $this->manageableIndicatorLevels();
+    }
+
+    /** id ตัวชี้วัดทั้งหมดที่ผู้ใช้เป็นผู้รับผิดชอบ */
+    public function ownedIndicatorIds(): array
+    {
+        return KpiIndicator::query()
+            ->whereHas('owners', fn ($q) => $q->whereKey($this->getKey()))
+            ->pluck('id')->all();
     }
 }

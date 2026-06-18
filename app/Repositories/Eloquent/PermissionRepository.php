@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\KpiLevel;
 use App\Models\Menu;
 use App\Models\User;
+use App\Models\UserOnLevel;
 use App\Models\UserOnMenu;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -15,12 +16,35 @@ class PermissionRepository implements PermissionRepositoryInterface
     public function paginateUsers(?string $search, int $perPage = 30): LengthAwarePaginator
     {
         return User::query()
-            ->with(['employee', 'kpiLevel'])
+            ->with(['employee', 'kpiLevelRows.level'])
             ->withCount('menuPermissions')
             ->when($search, fn ($q, $v) => $q->where('name', 'like', "%{$v}%"))
             ->orderBy('name')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    /**
+     * กำหนดบทบาท KPI ของผู้ใช้ (รองรับหลายบทบาท) — แทนที่ชุดบทบาทที่ไม่ใช่ super admin ทั้งหมด
+     * ไม่แตะแถว super admin (กำหนดผ่านระบบ/seeder เท่านั้น)
+     *
+     * @param  array<int>  $levelIds
+     */
+    public function setUserKpiLevels(int $userId, array $levelIds): void
+    {
+        UserOnLevel::where('user_id', $userId)
+            ->where('alias_system', 'kpi')
+            ->where('is_super_admin', false)
+            ->delete();
+
+        foreach (array_unique(array_filter($levelIds)) as $levelId) {
+            UserOnLevel::create([
+                'user_id' => $userId,
+                'alias_system' => 'kpi',
+                'level_id' => $levelId,
+                'is_super_admin' => false,
+            ]);
+        }
     }
 
     public function assignableLevels(): Collection
@@ -35,7 +59,13 @@ class PermissionRepository implements PermissionRepositoryInterface
 
     public function menus(string $system = 'kpi'): Collection
     {
-        return Menu::system($system)->orderBy('orderby')->get();
+        // เฉพาะเมนูระดับบนสุด — เมนูย่อยสืบทอดสิทธิ์จากเมนูแม่ ไม่ต้องตั้งสิทธิ์แยก
+        // ไม่รวม "แดชบอร์ด / Monitor" เพราะเปิดให้ผู้ใช้ทุกคนดูได้ ไม่ต้องกำหนดสิทธิ์รายผู้ใช้
+        return Menu::system($system)
+            ->whereNull('parent_id')
+            ->where('code', '!=', 'kpi.dashboard')
+            ->orderBy('orderby')
+            ->get();
     }
 
     public function permissionsForUser(int $userId): Collection

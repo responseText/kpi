@@ -40,7 +40,8 @@ class ResultController extends Controller implements HasMiddleware
             'search' => $request->string('search')->toString() ?: null,
         ];
 
-        $indicators = $this->indicators->paginateFiltered(array_filter($filters));
+        // แสดงเฉพาะตัวชี้วัดที่ผู้ใช้มีสิทธิ์บันทึกผลเท่านั้น
+        $indicators = $this->indicators->paginateRecordable(array_filter($filters), $request->user());
         $years = $this->strategies->availableYears();
 
         return view('results.index', compact('indicators', 'years', 'filters'));

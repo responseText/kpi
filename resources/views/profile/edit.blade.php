@@ -25,8 +25,10 @@
                     <dd class="font-medium text-slate-800">
                         @if ($user->is_super_admin)
                             ผู้ดูแลระบบสูงสุด
+                        @elseif ($user->kpiLevels()->isNotEmpty())
+                            {{ $user->kpiLevels()->pluck('name')->join(', ') }}
                         @else
-                            {{ $user->kpiLevel?->name ?: 'ผู้ใช้งานทั่วไป' }}
+                            ผู้ใช้งานทั่วไป
                         @endif
                     </dd>
                 </div>

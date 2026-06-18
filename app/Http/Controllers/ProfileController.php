@@ -15,7 +15,7 @@ class ProfileController extends Controller
 {
     public function edit(): View
     {
-        $user = auth()->user()->load('employee.prefix', 'employee.position', 'employee.division', 'kpiLevel');
+        $user = auth()->user()->load('employee.prefix', 'employee.position', 'employee.division', 'kpiLevelRows.level');
 
         return view('profile.edit', compact('user'));
     }

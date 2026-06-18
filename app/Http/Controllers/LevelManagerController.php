@@ -9,7 +9,6 @@ use App\Repositories\Contracts\LevelManagerRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\View\View;
 
 class LevelManagerController extends Controller implements HasMiddleware
@@ -22,9 +21,16 @@ class LevelManagerController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('menu:kpi.level_manager,view', only: ['index']),
-            new Middleware('menu:kpi.level_manager,create', only: ['store']),
-            new Middleware('menu:kpi.level_manager,delete', only: ['destroy']),
+            // เฉพาะผู้ดูแลระบบสูงสุด หรือผู้ดูแลตัวชี้วัดทั้งหมด เท่านั้นที่ใช้งานเมนูนี้ได้
+            function ($request, $next) {
+                abort_unless(
+                    (bool) $request->user()?->canManageLevelManagers(),
+                    403,
+                    'คุณไม่มีสิทธิ์ใช้งานเมนูผู้รับผิดชอบระดับ (เฉพาะผู้ดูแลระบบสูงสุดหรือผู้ดูแลตัวชี้วัดทั้งหมด)'
+                );
+
+                return $next($request);
+            },
         ];
     }
 

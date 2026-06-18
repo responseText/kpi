@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\KpiIndicator;
+use App\Models\KpiLevel;
 use App\Models\KpiResult;
 use App\Models\KpiTarget;
 use App\Models\User;
+use App\Models\UserOnLevel;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -123,6 +126,279 @@ class KpiFlowTest extends TestCase
 
         // ผู้ดูแลระบบสูงสุด → เข้าได้เสมอ
         $this->actingAs($this->admin())->get("/results/{$indicator->id}/edit")->assertOk();
+    }
+
+    public function test_results_index_lists_only_recordable_indicators(): void
+    {
+        // เตรียมตัวชี้วัด 2 ระดับ (ใช้ token ร่วม 'IDXMARK' เพื่อค้นหาให้แคบ ไม่ปนข้อมูลเดิม)
+        $strategy = \App\Models\KpiStrategy::create([
+            'year' => 2569, 'code' => 'IX', 'name' => 'ยุทธศาสตร์รายการบันทึกผล', 'status' => 'enable',
+        ]);
+        $sub = \App\Models\KpiSubStrategy::create([
+            'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์รายการบันทึกผล', 'status' => 'enable',
+        ]);
+        $hospital = KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'hospital', 'name' => 'IDXMARK ตัวชี้วัดรพ',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+        $ministry = KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'ministry', 'name' => 'IDXMARK ตัวชี้วัดกระทรวง',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+
+        // ผู้ใช้ทั่วไป มีสิทธิ์ "ดู" เมนูบันทึกผล แต่ยังไม่มีบทบาท/ไม่ใช่ผู้รับผิดชอบ
+        $stranger = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+        $resultMenu = \App\Models\Menu::where('code', 'kpi.result')->firstOrFail();
+        \App\Models\UserOnMenu::updateOrCreate(
+            ['user_id' => $stranger->id, 'menu_id' => $resultMenu->id],
+            ['alias_system' => 'kpi', 'can_view' => true, 'can_edit' => true],
+        );
+
+        // ไม่มีบทบาท + ไม่ใช่ผู้รับผิดชอบ → ไม่เห็นรายการใดเลย
+        $this->actingAs($stranger->fresh())->get('/results?search=IDXMARK')
+            ->assertOk()->assertDontSee('ตัวชี้วัดรพ')->assertDontSee('ตัวชี้วัดกระทรวง');
+
+        // เป็นผู้รับผิดชอบเฉพาะตัวชี้วัดระดับ รพ. → เห็นเฉพาะตัวนั้น
+        $hospital->owners()->attach($stranger->id, ['is_primary' => false]);
+        $this->actingAs($stranger->fresh())->get('/results?search=IDXMARK')
+            ->assertOk()->assertSee('ตัวชี้วัดรพ')->assertDontSee('ตัวชี้วัดกระทรวง');
+
+        // เปลี่ยนเป็นผู้ดูแล "ระดับโรงพยาบาล" (ไม่ใช่ผู้รับผิดชอบ) → เห็นทุกตัวระดับ รพ. แต่ไม่เห็นระดับกระทรวง
+        $hospital->owners()->detach($stranger->id);
+        $hospitalLevelId = KpiLevel::where('code', KpiLevel::ADMIN_HOSPITAL)->value('id');
+        UserOnLevel::create(['user_id' => $stranger->id, 'alias_system' => 'kpi', 'level_id' => $hospitalLevelId, 'is_super_admin' => false]);
+        $this->actingAs($stranger->fresh())->get('/results?search=IDXMARK')
+            ->assertOk()->assertSee('ตัวชี้วัดรพ')->assertDontSee('ตัวชี้วัดกระทรวง');
+
+        // เข้าหน้าบันทึกผลของตัวชี้วัดระดับกระทรวงโดยตรง → ถูกปฏิเสธ (403)
+        $this->actingAs($stranger->fresh())->get("/results/{$ministry->id}/edit")->assertForbidden();
+
+        // ผู้ดูแลระบบสูงสุด → เห็นทั้งสองระดับ
+        $this->actingAs($this->admin())->get('/results?search=IDXMARK')
+            ->assertOk()->assertSee('ตัวชี้วัดรพ')->assertSee('ตัวชี้วัดกระทรวง');
+    }
+
+    public function test_indicators_menu_restricted_to_indicator_admins_by_level(): void
+    {
+        // ตัวชี้วัด 2 ระดับ (token 'INDMARK')
+        $strategy = \App\Models\KpiStrategy::create([
+            'year' => 2569, 'code' => 'IM', 'name' => 'ยุทธศาสตร์จัดการตัวชี้วัด', 'status' => 'enable',
+        ]);
+        $sub = \App\Models\KpiSubStrategy::create([
+            'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์จัดการตัวชี้วัด', 'status' => 'enable',
+        ]);
+        $hospital = KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'hospital', 'name' => 'INDMARK ตชว.รพ',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+        $ministry = KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'ministry', 'name' => 'INDMARK ตชว.กระทรวง',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+
+        $hospitalAdmin = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+        $plain = User::whereNotIn('id', [1, 2, $hospitalAdmin->id])->orderBy('id')->firstOrFail();
+        $hospitalLevelId = KpiLevel::where('code', KpiLevel::ADMIN_HOSPITAL)->value('id');
+
+        // ผู้ใช้ทั่วไป (ไม่มีบทบาทผู้ดูแล) → เข้าเมนูไม่ได้เลย (403)
+        $this->actingAs($plain->fresh())->get('/indicators')->assertForbidden();
+
+        // ผู้ดูแลระดับโรงพยาบาล → เข้าได้ เห็นเฉพาะระดับ รพ.
+        UserOnLevel::create(['user_id' => $hospitalAdmin->id, 'alias_system' => 'kpi', 'level_id' => $hospitalLevelId, 'is_super_admin' => false]);
+        $this->actingAs($hospitalAdmin->fresh())->get('/indicators?search=INDMARK')
+            ->assertOk()->assertSee('ตชว.รพ')->assertDontSee('ตชว.กระทรวง');
+
+        // ดู/แก้ตัวชี้วัดระดับ รพ. ได้ + ฟอร์มสร้างเปิดได้ แต่ระดับกระทรวงถูกปฏิเสธ (403)
+        $this->actingAs($hospitalAdmin->fresh())->get('/indicators/create')->assertOk();
+        $this->actingAs($hospitalAdmin->fresh())->get("/indicators/{$hospital->id}")->assertOk();
+        $this->actingAs($hospitalAdmin->fresh())->get("/indicators/{$hospital->id}/edit")->assertOk();
+        $this->actingAs($hospitalAdmin->fresh())->get("/indicators/{$ministry->id}")->assertForbidden();
+        $this->actingAs($hospitalAdmin->fresh())->get("/indicators/{$ministry->id}/edit")->assertForbidden();
+
+        // สร้างตัวชี้วัดระดับกระทรวง → ถูกปฏิเสธ (สร้างได้เฉพาะระดับของตน)
+        $ministryPayload = [
+            'sub_strategy_id' => $sub->id, 'level' => 'ministry', 'name' => 'INDMARK สร้างกระทรวง',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+            'owners' => [$hospitalAdmin->id], 'primary_owner' => $hospitalAdmin->id,
+        ];
+        $this->actingAs($hospitalAdmin->fresh())->post('/indicators', $ministryPayload)->assertForbidden();
+
+        // สร้างตัวชี้วัดระดับ รพ. → สำเร็จ
+        $hospitalPayload = array_merge($ministryPayload, ['level' => 'hospital', 'name' => 'INDMARK สร้างรพ']);
+        $this->actingAs($hospitalAdmin->fresh())->post('/indicators', $hospitalPayload)->assertRedirect();
+        $this->assertDatabaseHas('kpi_indicators', ['name' => 'INDMARK สร้างรพ', 'level' => 'hospital']);
+
+        // ผู้ดูแลระบบสูงสุด → เห็นทั้งสองระดับ
+        $this->actingAs($this->admin())->get('/indicators?search=INDMARK')
+            ->assertOk()->assertSee('ตชว.รพ')->assertSee('ตชว.กระทรวง');
+    }
+
+    public function test_targets_menu_restricted_to_indicator_admins_by_level(): void
+    {
+        // ตัวชี้วัด 2 ระดับ (token 'TGTMARK' เพื่อค้นหาให้แคบ)
+        $strategy = \App\Models\KpiStrategy::create([
+            'year' => 2569, 'code' => 'TG', 'name' => 'ยุทธศาสตร์ค่าเป้าหมาย', 'status' => 'enable',
+        ]);
+        $sub = \App\Models\KpiSubStrategy::create([
+            'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์ค่าเป้าหมาย', 'status' => 'enable',
+        ]);
+        $hospital = KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'hospital', 'name' => 'TGTMARK ตชว.รพ',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+        $ministry = KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'ministry', 'name' => 'TGTMARK ตชว.กระทรวง',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+
+        $hospitalAdmin = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+        $plain = User::whereNotIn('id', [1, 2, $hospitalAdmin->id])->orderBy('id')->firstOrFail();
+        $hospitalLevelId = KpiLevel::where('code', KpiLevel::ADMIN_HOSPITAL)->value('id');
+
+        // ผู้ใช้ทั่วไป (ไม่มีบทบาทผู้ดูแล) → เข้าเมนูไม่ได้เลย (403)
+        $this->actingAs($plain->fresh())->get('/targets')->assertForbidden();
+
+        // ผู้ดูแลระดับโรงพยาบาล → เข้าได้ เห็นเฉพาะระดับ รพ.
+        UserOnLevel::create(['user_id' => $hospitalAdmin->id, 'alias_system' => 'kpi', 'level_id' => $hospitalLevelId, 'is_super_admin' => false]);
+        $this->actingAs($hospitalAdmin->fresh())->get('/targets?search=TGTMARK')
+            ->assertOk()->assertSee('ตชว.รพ')->assertDontSee('ตชว.กระทรวง');
+
+        // กำหนดค่าเป้าหมายระดับ รพ. ได้ แต่ระดับกระทรวงถูกปฏิเสธ (403)
+        $this->actingAs($hospitalAdmin->fresh())->get("/targets/{$hospital->id}/edit")->assertOk();
+        $this->actingAs($hospitalAdmin->fresh())->get("/targets/{$ministry->id}/edit")->assertForbidden();
+
+        // ผู้ดูแลระบบสูงสุด → เห็นทั้งสองระดับ + แก้ได้ทุกระดับ
+        $this->actingAs($this->admin())->get('/targets?search=TGTMARK')
+            ->assertOk()->assertSee('ตชว.รพ')->assertSee('ตชว.กระทรวง');
+        $this->actingAs($this->admin())->get("/targets/{$ministry->id}/edit")->assertOk();
+    }
+
+    public function test_dashboard_level_submenus_filter_by_level(): void
+    {
+        $admin = $this->admin();
+
+        // ทุกเมนูย่อยของแดชบอร์ดเปิดได้
+        foreach (['/dashboard', '/dashboard/ministry', '/dashboard/province', '/dashboard/hospital'] as $url) {
+            $this->actingAs($admin)->get($url)->assertOk();
+        }
+
+        // สร้างตัวชี้วัดระดับโรงพยาบาลปี 2569
+        $strategy = \App\Models\KpiStrategy::create([
+            'year' => 2569, 'code' => 'DB', 'name' => 'ยุทธศาสตร์เมนูแดชบอร์ด', 'status' => 'enable',
+        ]);
+        $sub = \App\Models\KpiSubStrategy::create([
+            'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์เมนูแดชบอร์ด', 'status' => 'enable',
+        ]);
+        KpiIndicator::create([
+            'sub_strategy_id' => $sub->id, 'level' => 'hospital', 'name' => 'ตัวชี้วัดเฉพาะโรงพยาบาลDB',
+            'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
+        ]);
+
+        // ระดับโรงพยาบาลเห็น, ระดับกระทรวงไม่เห็น
+        $this->actingAs($admin)->get('/dashboard/hospital?year=2569')->assertOk()->assertSee('ตัวชี้วัดเฉพาะโรงพยาบาลDB');
+        $this->actingAs($admin)->get('/dashboard/ministry?year=2569')->assertOk()->assertDontSee('ตัวชี้วัดเฉพาะโรงพยาบาลDB');
+    }
+
+    public function test_dashboard_open_to_all_and_excluded_from_permission_table(): void
+    {
+        // ผู้ใช้ทั่วไป (ไม่มีสิทธิ์เมนูใด ๆ) เข้าแดชบอร์ด/Monitor ได้
+        $plain = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+        $this->actingAs($plain->fresh())->get('/dashboard')->assertOk();
+        $this->actingAs($plain->fresh())->get('/dashboard/hospital')->assertOk();
+        $this->actingAs($plain->fresh())->get('/monitor')->assertOk();
+
+        // หน้ากำหนดสิทธิ์: ไม่มีแถวจัดการเมนูแดชบอร์ด แต่ยังมีเมนูอื่น (เช่น ตัวชี้วัด)
+        $dashboardMenu = \App\Models\Menu::where('code', 'kpi.dashboard')->firstOrFail();
+        $indicatorMenu = \App\Models\Menu::where('code', 'kpi.indicator')->firstOrFail();
+
+        $res = $this->actingAs($this->admin())->get("/permissions/{$plain->id}/edit");
+        $res->assertOk();
+        $res->assertSee("permissions[{$indicatorMenu->id}]", false);
+        $res->assertDontSee("permissions[{$dashboardMenu->id}]", false);
+    }
+
+    public function test_role_data_lives_in_users_on_level_not_users_table(): void
+    {
+        // คอลัมน์บทบาทถูกย้ายออกจากตาราง users แล้ว
+        $this->assertFalse(Schema::hasColumn('users', 'is_super_admin'));
+        $this->assertFalse(Schema::hasColumn('users', 'kpi_level_id'));
+
+        // ผู้ดูแลระบบสูงสุด (user 1) อ่านค่าได้จาก users_on_level
+        $this->assertTrue($this->admin()->is_super_admin);
+        $this->assertTrue(
+            UserOnLevel::where('user_id', 1)->where('alias_system', 'kpi')->where('is_super_admin', true)->exists()
+        );
+    }
+
+    public function test_indicator_admin_all_can_manage_permissions(): void
+    {
+        $users = User::whereNotIn('id', [1, 2])->orderBy('id')->take(2)->get();
+        $actor = $users[0];
+        $target = $users[1];
+
+        $allId = KpiLevel::where('code', KpiLevel::ADMIN_ALL)->value('id');
+        $hospitalId = KpiLevel::where('code', KpiLevel::ADMIN_HOSPITAL)->value('id');
+        $ownerId = KpiLevel::where('code', KpiLevel::OWNER)->value('id');
+
+        // ผู้ดูแลตัวชี้วัดทั้งหมด → เข้าเมนูกำหนดสิทธิ์ได้
+        UserOnLevel::create(['user_id' => $actor->id, 'alias_system' => 'kpi', 'level_id' => $allId, 'is_super_admin' => false]);
+        $this->actingAs($actor->fresh())->get('/permissions')->assertOk();
+
+        // และกำหนดบทบาทให้ผู้อื่นได้ — เก็บที่ users_on_level
+        $this->actingAs($actor->fresh())->put("/permissions/{$target->id}", [
+            'kpi_level_ids' => [$ownerId],
+            'permissions' => [],
+        ])->assertRedirect(route('permissions.index'));
+        $this->assertContains('indicator_owner', $target->fresh()->kpiLevels()->pluck('code')->all());
+
+        // ผู้ดูแล "ระดับโรงพยาบาล" (ไม่ใช่ทั้งหมด) → เข้าเมนูกำหนดสิทธิ์ไม่ได้
+        UserOnLevel::where('user_id', $target->id)->where('alias_system', 'kpi')->delete();
+        UserOnLevel::create(['user_id' => $target->id, 'alias_system' => 'kpi', 'level_id' => $hospitalId, 'is_super_admin' => false]);
+        $this->actingAs($target->fresh())->get('/permissions')->assertForbidden();
+    }
+
+    public function test_user_can_hold_multiple_kpi_roles(): void
+    {
+        $target = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+        $hospitalId = KpiLevel::where('code', KpiLevel::ADMIN_HOSPITAL)->value('id');
+        $ministryId = KpiLevel::where('code', KpiLevel::ADMIN_MINISTRY)->value('id');
+
+        // กำหนด 2 บทบาทพร้อมกันผ่านหน้าจัดการสิทธิ์
+        $this->actingAs($this->admin())->put("/permissions/{$target->id}", [
+            'kpi_level_ids' => [$hospitalId, $ministryId],
+            'permissions' => [],
+        ])->assertRedirect(route('permissions.index'));
+
+        $u = $target->fresh();
+        $this->assertCount(2, $u->kpiLevels());
+        // ขอบเขตการจัดการครอบคลุมทั้งสองระดับ แต่ไม่รวมระดับที่ไม่ได้รับ
+        $this->assertTrue($u->canManageIndicatorLevel('hospital'));
+        $this->assertTrue($u->canManageIndicatorLevel('ministry'));
+        $this->assertFalse($u->canManageIndicatorLevel('province'));
+    }
+
+    public function test_level_managers_menu_restricted_to_top_admins(): void
+    {
+        $allId = KpiLevel::where('code', KpiLevel::ADMIN_ALL)->value('id');
+        $hospitalId = KpiLevel::where('code', KpiLevel::ADMIN_HOSPITAL)->value('id');
+
+        $adminAll = User::whereNotIn('id', [1, 2])->orderBy('id')->skip(0)->firstOrFail();
+        $levelAdmin = User::whereNotIn('id', [1, 2, $adminAll->id])->orderBy('id')->firstOrFail();
+
+        // ผู้ดูแลระบบสูงสุด → เข้าได้
+        $this->actingAs($this->admin())->get('/level-managers')->assertOk();
+
+        // ผู้ดูแลตัวชี้วัดทั้งหมด → เข้าได้
+        UserOnLevel::create(['user_id' => $adminAll->id, 'alias_system' => 'kpi', 'level_id' => $allId, 'is_super_admin' => false]);
+        $this->actingAs($adminAll->fresh())->get('/level-managers')->assertOk();
+
+        // ผู้ดูแลระดับ (โรงพยาบาล) → ถูกปฏิเสธ (403)
+        UserOnLevel::create(['user_id' => $levelAdmin->id, 'alias_system' => 'kpi', 'level_id' => $hospitalId, 'is_super_admin' => false]);
+        $this->actingAs($levelAdmin->fresh())->get('/level-managers')->assertForbidden();
+
+        // ผู้ใช้ทั่วไป (ไม่มีบทบาท) → ถูกปฏิเสธ (403)
+        $plain = User::whereNotIn('id', [1, 2, $adminAll->id, $levelAdmin->id])->orderBy('id')->firstOrFail();
+        $this->actingAs($plain->fresh())->get('/level-managers')->assertForbidden();
     }
 
     public function test_user_can_edit_own_profile_and_password(): void

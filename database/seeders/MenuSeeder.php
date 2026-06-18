@@ -39,5 +39,30 @@ class MenuSeeder extends Seeder
                 ]
             );
         }
+
+        // เมนูย่อยของแดชบอร์ด — แยกการแสดงตามระดับตัวชี้วัด (สิทธิ์สืบทอดจากเมนูแดชบอร์ด)
+        $dashboardId = Menu::where('code', 'kpi.dashboard')->value('id');
+
+        $children = [
+            ['code' => 'kpi.dashboard.all',      'name' => 'ทั้งหมด',     'route' => 'dashboard'],
+            ['code' => 'kpi.dashboard.ministry', 'name' => 'กระทรวง',     'route' => 'dashboard.ministry'],
+            ['code' => 'kpi.dashboard.province', 'name' => 'จังหวัด',      'route' => 'dashboard.province'],
+            ['code' => 'kpi.dashboard.hospital', 'name' => 'โรงพยาบาล',   'route' => 'dashboard.hospital'],
+        ];
+
+        foreach ($children as $i => $child) {
+            Menu::updateOrCreate(
+                ['code' => $child['code']],
+                [
+                    'system' => 'kpi',
+                    'name' => $child['name'],
+                    'route' => $child['route'],
+                    'icon' => null,
+                    'parent_id' => $dashboardId,
+                    'orderby' => ($i + 1) * 10,
+                    'status' => 'enable',
+                ]
+            );
+        }
     }
 }

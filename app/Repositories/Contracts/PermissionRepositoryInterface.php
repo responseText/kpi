@@ -17,6 +17,13 @@ interface PermissionRepositoryInterface
     /** ระดับสิทธิ์ที่กำหนดให้ผู้ใช้ผ่าน UI ได้ (ไม่รวมผู้ดูแลระบบสูงสุด) */
     public function assignableLevels(): Collection;
 
+    /**
+     * กำหนดบทบาท/ระดับสิทธิ์ KPI ของผู้ใช้ (รองรับหลายบทบาท, เก็บที่ users_on_level)
+     *
+     * @param  array<int>  $levelIds
+     */
+    public function setUserKpiLevels(int $userId, array $levelIds): void;
+
     /** สิทธิ์ทั้งหมดของผู้ใช้คนหนึ่ง key by menu_id */
     public function permissionsForUser(int $userId): Collection;
 

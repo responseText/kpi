@@ -52,15 +52,12 @@
                             <td class="px-5 py-3 text-slate-600">{{ $ind->level_label }}</td>
                             <td class="px-5 py-3 text-center text-slate-600">{{ $done }}/{{ $total }} ช่วง</td>
                             <td class="px-5 py-3 text-right">
-                                @if (auth()->user()->canRecordResultFor($ind))
-                                    <x-btn :href="route('results.edit', $ind)" variant="ghost"><x-icon name="result" class="w-4 h-4" /> บันทึกผล</x-btn>
-                                @else
-                                    <span class="text-xs text-slate-400">ไม่มีสิทธิ์บันทึก</span>
-                                @endif
+                                {{-- รายการถูกกรองไว้แล้วให้เหลือเฉพาะตัวชี้วัดที่ผู้ใช้มีสิทธิ์บันทึก --}}
+                                <x-btn :href="route('results.edit', $ind)" variant="ghost"><x-icon name="result" class="w-4 h-4" /> บันทึกผล</x-btn>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="px-5 py-10 text-center text-slate-400">ยังไม่มีตัวชี้วัด</td></tr>
+                        <tr><td colspan="4" class="px-5 py-10 text-center text-slate-400">ไม่มีตัวชี้วัดที่คุณมีสิทธิ์บันทึกผล</td></tr>
                     @endforelse
                 </tbody>
             </table>
