@@ -1,3 +1,7 @@
+@php
+    // ตัดศูนย์ท้ายทศนิยมที่มาจาก cast decimal (เช่น "85.0000" → "85", "4.5000" → "4.5")
+    $trim = fn ($v) => $v === null || $v === '' ? null : rtrim(rtrim((string) $v, '0'), '.');
+@endphp
 <x-layouts.app title="บันทึกผลงาน" header="บันทึกผลงาน">
     <div class="max-w-4xl">
         <x-card :title="$indicator->name" :subtitle="$indicator->level_label . ' · ' . $indicator->year_type_label . ' ' . $indicator->year">
@@ -38,10 +42,10 @@
                                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                         <x-form.input :name="'results[' . $t->id . '][numerator_value]'"
                                             label="{{ $indicator->numerator_label ?: 'ตัวตั้ง (A)' }}" type="number" step="any" data-a="1"
-                                            :value="old('results.'.$t->id.'.numerator_value', $r?->numerator_value)" />
+                                            :value="old('results.'.$t->id.'.numerator_value', $trim($r?->numerator_value))" />
                                         <x-form.input :name="'results[' . $t->id . '][denominator_value]'"
                                             label="{{ $indicator->denominator_label ?: 'ตัวหาร (B)' }}" type="number" step="any" data-b="1"
-                                            :value="old('results.'.$t->id.'.denominator_value', $r?->denominator_value)" />
+                                            :value="old('results.'.$t->id.'.denominator_value', $trim($r?->denominator_value))" />
                                         <div>
                                             <label class="mb-1 block text-sm font-medium text-slate-700">ผลคำนวณ{{ $indicator->unit ? ' (' . $indicator->unit . ')' : '' }}</label>
                                             <div class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-indigo-700" data-out>—</div>
@@ -55,7 +59,7 @@
                             @else
                                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                     <x-form.input :name="'results[' . $t->id . '][result_value]'" label="ค่าผลงาน{{ $indicator->unit ? ' (' . $indicator->unit . ')' : '' }}" type="number" step="any"
-                                        :value="old('results.'.$t->id.'.result_value', $r?->result_value)" />
+                                        :value="old('results.'.$t->id.'.result_value', $trim($r?->result_value))" />
                                     <div class="sm:col-span-2">
                                         <x-form.input :name="'results[' . $t->id . '][note]'" label="หมายเหตุ" :value="old('results.'.$t->id.'.note', $r?->note)" />
                                     </div>

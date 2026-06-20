@@ -42,7 +42,7 @@ class ResultMeasurementTest extends TestCase
     private function makeTarget(KpiIndicator $ind, string $operator, float $value): KpiTarget
     {
         return KpiTarget::create([
-            'indicator_id' => $ind->id, 'period_no' => 1, 'period_label' => 'รายปี',
+            'indicator_id' => $ind->id, 'period_no' => 0, 'period_label' => 'รายปี',
             'start_date' => '2025-10-01', 'end_date' => '2026-09-30',
             'operator' => $operator, 'target_value' => $value,
         ]);
@@ -131,5 +131,27 @@ class ResultMeasurementTest extends TestCase
         $res->assertSee('จำนวนผ่านเกณฑ์ABLBL');   // ป้ายตัวตั้ง (A)
         $res->assertSee('จำนวนทั้งหมดABLBL');      // ป้ายตัวหาร (B)
         $res->assertSee('ผลคำนวณ');                 // ช่องผลคำนวณอัตโนมัติ
+    }
+
+    public function test_edit_form_trims_trailing_decimal_zeros(): void
+    {
+        $ind = $this->makeIndicator([
+            'measurement_type' => 'percent', 'unit' => 'ร้อยละ',
+            'numerator_label' => 'A', 'denominator_label' => 'B',
+        ]);
+        $target = $this->makeTarget($ind, 'gte', 80);
+
+        // บันทึก A=85, B=100 (จำนวนเต็ม ไม่มีทศนิยม)
+        $this->actingAs($this->admin())->put("/results/{$ind->id}", [
+            'results' => [$target->id => ['numerator_value' => 85, 'denominator_value' => 100, 'note' => null]],
+        ])->assertRedirect("/indicators/{$ind->id}");
+
+        // ฟอร์มต้องแสดง 85 / 100 ไม่ใช่ 85.0000 / 100.0000
+        $res = $this->actingAs($this->admin())->get("/results/{$ind->id}/edit");
+        $res->assertOk();
+        $res->assertSee('value="85"', false);
+        $res->assertSee('value="100"', false);
+        $res->assertDontSee('85.0000');
+        $res->assertDontSee('100.0000');
     }
 }

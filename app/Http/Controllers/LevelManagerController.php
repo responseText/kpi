@@ -7,7 +7,9 @@ use App\Models\KpiIndicator;
 use App\Models\KpiLevelManager;
 use App\Repositories\Contracts\LevelManagerRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
+use App\Repositories\Contracts\StrategyRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\View\View;
 
@@ -16,6 +18,7 @@ class LevelManagerController extends Controller implements HasMiddleware
     public function __construct(
         private readonly LevelManagerRepositoryInterface $levelManagers,
         private readonly PermissionRepositoryInterface $permissions,
+        private readonly StrategyRepositoryInterface $strategies,
     ) {}
 
     public static function middleware(): array
@@ -34,14 +37,23 @@ class LevelManagerController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        $managers = $this->levelManagers->allWithUser();
+        $year = $request->integer('year') ?: null;
+
+        $managers = $this->levelManagers->allWithUser($year);
         $users = $this->permissions->selectableUsers();
         $levels = KpiIndicator::LEVELS;
         $roles = KpiLevelManager::ROLES;
 
-        return view('level_managers.index', compact('managers', 'users', 'levels', 'roles'));
+        // ปีให้เลือกกรอง: รวมปีจากรายการผู้รับผิดชอบ + ปีจากยุทธศาสตร์
+        $years = $this->levelManagers->availableYears()
+            ->merge($this->strategies->availableYears())
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        return view('level_managers.index', compact('managers', 'users', 'levels', 'roles', 'years', 'year'));
     }
 
     public function store(LevelManagerRequest $request): RedirectResponse

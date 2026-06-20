@@ -11,15 +11,29 @@ class LevelManagerRepository extends BaseRepository implements LevelManagerRepos
 {
     protected function makeModel(): Model
     {
-        return new KpiLevelManager();
+        return new KpiLevelManager;
     }
 
-    public function allWithUser(): Collection
+    public function allWithUser(?int $year = null): Collection
     {
         return $this->query()
             ->with('user.employee')
+            // ปีที่ระบุ + รายการ "ทุกปี" (year = null) ซึ่งใช้ได้กับทุกปี
+            ->when($year !== null, fn ($q) => $q->where(
+                fn ($w) => $w->where('year', $year)->orWhereNull('year')
+            ))
             ->orderBy('level')
             ->orderBy('role')
             ->get();
+    }
+
+    public function availableYears(): Collection
+    {
+        return $this->query()
+            ->whereNotNull('year')
+            ->select('year')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year');
     }
 }

@@ -33,6 +33,29 @@
 
         {{-- รายการ --}}
         <div class="lg:col-span-2 space-y-5">
+            {{-- ค้นหาผู้รับผิดชอบตามปี พ.ศ. --}}
+            <x-card padding="p-4">
+                <form method="GET" class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-500">ปี พ.ศ.</label>
+                        <select name="year" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm">
+                            <option value="">ทุกปี</option>
+                            @foreach ($years as $y)
+                                <option value="{{ $y }}" @selected(($year ?? '') == $y)>{{ $y }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <x-btn type="submit" variant="secondary">ค้นหา</x-btn>
+                    @if ($year)
+                        <span class="text-sm text-slate-500">
+                            แสดงผู้รับผิดชอบของปี <span class="font-semibold text-slate-700">{{ $year }}</span>
+                            <span class="text-xs text-slate-400">(รวมรายการที่ตั้งไว้ทุกปี)</span>
+                        </span>
+                        <x-btn :href="route('level-managers.index')" variant="ghost" class="ml-auto">ล้างตัวกรอง</x-btn>
+                    @endif
+                </form>
+            </x-card>
+
             @foreach ($levels as $levelKey => $levelName)
                 <x-card :title="$levelName">
                     @php $items = $grouped->get($levelKey, collect()); @endphp
