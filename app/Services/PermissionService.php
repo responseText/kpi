@@ -48,6 +48,10 @@ class PermissionService
                 if ($m->code === 'kpi.user') {
                     return $user->canManageUsers();
                 }
+                // จัดการหน่วยวัด KPI: เฉพาะผู้ดูแลระบบสูงสุดเท่านั้น
+                if ($m->code === 'kpi.unit') {
+                    return $user->canManageUnits();
+                }
                 // ตัวชี้วัด + กำหนดค่าเป้าหมาย: เฉพาะผู้ดูแลตัวชี้วัด (ทุกระดับ/ทั้งหมด/รายระดับ)
                 if ($m->code === 'kpi.indicator' || $m->code === 'kpi.target') {
                     return $user->isIndicatorManager();

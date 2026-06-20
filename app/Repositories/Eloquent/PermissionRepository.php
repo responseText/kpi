@@ -60,11 +60,11 @@ class PermissionRepository implements PermissionRepositoryInterface
     public function menus(string $system = 'kpi'): Collection
     {
         // เฉพาะเมนูระดับบนสุด — เมนูย่อยสืบทอดสิทธิ์จากเมนูแม่ ไม่ต้องตั้งสิทธิ์แยก
-        // ไม่รวม "แดชบอร์ด / Monitor" (เปิดให้ทุกคน) และ "จัดการผู้ใช้งาน" (เฉพาะผู้ดูแลระบบสูงสุด
-        // ควบคุมด้วยบทบาท ไม่ใช่สิทธิ์รายเมนู) เพราะไม่ต้องกำหนดสิทธิ์รายผู้ใช้
+        // ไม่รวม "แดชบอร์ด / Monitor" (เปิดให้ทุกคน), "จัดการผู้ใช้งาน" และ "จัดการหน่วยวัด KPI"
+        // (เฉพาะผู้ดูแลระบบสูงสุด ควบคุมด้วยบทบาท ไม่ใช่สิทธิ์รายเมนู) เพราะไม่ต้องกำหนดสิทธิ์รายผู้ใช้
         return Menu::system($system)
             ->whereNull('parent_id')
-            ->whereNotIn('code', ['kpi.dashboard', 'kpi.user'])
+            ->whereNotIn('code', ['kpi.dashboard', 'kpi.user', 'kpi.unit'])
             ->orderBy('orderby')
             ->get();
     }

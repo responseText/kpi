@@ -176,6 +176,15 @@ class User extends Authenticatable
         return $this->is_super_admin;
     }
 
+    /**
+     * มีสิทธิ์เข้าใช้เมนู "จัดการหน่วยวัด KPI" (master)
+     * เฉพาะผู้ดูแลระบบสูงสุดเท่านั้น
+     */
+    public function canManageUnits(): bool
+    {
+        return $this->is_super_admin;
+    }
+
     /** รหัสบทบาททั้งหมดในระบบ KPI (รวม super_admin ถ้ามี) */
     public function levelCodes(): array
     {

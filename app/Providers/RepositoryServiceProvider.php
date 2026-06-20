@@ -10,6 +10,7 @@ use App\Repositories\Contracts\ResultRepositoryInterface;
 use App\Repositories\Contracts\StrategyRepositoryInterface;
 use App\Repositories\Contracts\SubStrategyRepositoryInterface;
 use App\Repositories\Contracts\TargetRepositoryInterface;
+use App\Repositories\Contracts\UnitRepositoryInterface;
 use App\Repositories\Eloquent\DashboardRepository;
 use App\Repositories\Eloquent\IndicatorRepository;
 use App\Repositories\Eloquent\LevelManagerRepository;
@@ -18,6 +19,7 @@ use App\Repositories\Eloquent\ResultRepository;
 use App\Repositories\Eloquent\StrategyRepository;
 use App\Repositories\Eloquent\SubStrategyRepository;
 use App\Repositories\Eloquent\TargetRepository;
+use App\Repositories\Eloquent\UnitRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -32,6 +34,7 @@ class RepositoryServiceProvider extends ServiceProvider
         LevelManagerRepositoryInterface::class => LevelManagerRepository::class,
         PermissionRepositoryInterface::class => PermissionRepository::class,
         DashboardRepositoryInterface::class => DashboardRepository::class,
+        UnitRepositoryInterface::class => UnitRepository::class,
     ];
 
     public function register(): void

@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MenuSeeder::class,
             KpiLevelSeeder::class,
+            KpiUnitSeeder::class,
             PermissionSeeder::class,
         ]);
     }

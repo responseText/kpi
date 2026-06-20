@@ -18,6 +18,7 @@ class MenuSeeder extends Seeder
             ['code' => 'kpi.strategy', 'name' => 'ยุทธศาสตร์', 'route' => 'strategies.index', 'icon' => 'strategy'],
             ['code' => 'kpi.sub_strategy', 'name' => 'กลยุทธ์', 'route' => 'sub-strategies.index', 'icon' => 'sub_strategy'],
             ['code' => 'kpi.indicator', 'name' => 'ตัวชี้วัด', 'route' => 'indicators.index', 'icon' => 'indicator'],
+            ['code' => 'kpi.unit', 'name' => 'หน่วยวัด KPI', 'route' => 'units.index', 'icon' => 'unit'],
             ['code' => 'kpi.target', 'name' => 'กำหนดค่าเป้าหมาย', 'route' => 'targets.index', 'icon' => 'target'],
             ['code' => 'kpi.result', 'name' => 'บันทึกผลงาน', 'route' => 'results.index', 'icon' => 'result'],
             ['code' => 'kpi.level_manager', 'name' => 'ผู้รับผิดชอบระดับ', 'route' => 'level-managers.index', 'icon' => 'level'],

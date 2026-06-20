@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\IndicatorRequest;
 use App\Models\KpiIndicator;
+use App\Models\KpiUnit;
 use App\Repositories\Contracts\IndicatorRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Repositories\Contracts\StrategyRepositoryInterface;
@@ -159,6 +160,7 @@ class IndicatorController extends Controller implements HasMiddleware
             'levels' => $this->levelsFor($request),
             'yearTypes' => KpiIndicator::YEAR_TYPES,
             'periodTypes' => KpiIndicator::PERIOD_TYPES,
+            'unitGroups' => KpiUnit::groupedEnabled(),
         ];
     }
 

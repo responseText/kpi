@@ -13,6 +13,7 @@ use App\Http\Controllers\ResultController;
 use App\Http\Controllers\StrategyController;
 use App\Http\Controllers\SubStrategyController;
 use App\Http\Controllers\TargetController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +46,11 @@ Route::put('results/{indicator}', [ResultController::class, 'update'])->name('re
 Route::get('level-managers', [LevelManagerController::class, 'index'])->name('level-managers.index');
 Route::post('level-managers', [LevelManagerController::class, 'store'])->name('level-managers.store');
 Route::delete('level-managers/{levelManager}', [LevelManagerController::class, 'destroy'])->name('level-managers.destroy');
+
+// หน่วยวัด KPI (master — เฉพาะผู้ดูแลระบบสูงสุด)
+Route::resource('units', UnitController::class)
+    ->parameters(['units' => 'unit'])
+    ->except(['show'])->names('units');
 
 // รายงาน
 Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

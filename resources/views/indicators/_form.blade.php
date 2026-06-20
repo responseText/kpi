@@ -40,7 +40,24 @@
             <option value="{{ $key }}" @selected(old('period_type', $ind->period_type ?? 'annual') === $key)>{{ $name }}</option>
         @endforeach
     </x-form.select>
-    <x-form.input name="unit" label="หน่วยวัด" :value="$ind->unit ?? ''" placeholder="ร้อยละ / ครั้ง / คน" />
+    @php
+        $currentUnit = old('unit', $ind->unit ?? '');
+        $knownUnit = false;
+    @endphp
+    <x-form.select name="unit" label="หน่วยวัด" help="เลือกตามกลุ่ม KPI">
+        <option value="">— ไม่ระบุ —</option>
+        @foreach ($unitGroups as $groupCode => $groupUnits)
+            <optgroup label="{{ \App\Models\KpiUnit::GROUPS[$groupCode] ?? $groupCode }}">
+                @foreach ($groupUnits as $unitOption)
+                    @if ($currentUnit === $unitOption->name) @php $knownUnit = true; @endphp @endif
+                    <option value="{{ $unitOption->name }}" @selected($currentUnit === $unitOption->name)>{{ $unitOption->name }}</option>
+                @endforeach
+            </optgroup>
+        @endforeach
+        @if ($currentUnit !== '' && ! $knownUnit)
+            <option value="{{ $currentUnit }}" selected>{{ $currentUnit }} (กำหนดเอง)</option>
+        @endif
+    </x-form.select>
 </div>
 
 <p class="mt-2 rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
