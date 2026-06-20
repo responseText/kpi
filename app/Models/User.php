@@ -167,6 +167,15 @@ class User extends Authenticatable
         return $this->isTopAdmin();
     }
 
+    /**
+     * มีสิทธิ์เข้าใช้เมนู "จัดการผู้ใช้งาน" (เปลี่ยนรหัสผ่าน/สถานะ/ระดับของผู้ใช้อื่น)
+     * เฉพาะผู้ดูแลระบบสูงสุดเท่านั้น
+     */
+    public function canManageUsers(): bool
+    {
+        return $this->is_super_admin;
+    }
+
     /** รหัสบทบาททั้งหมดในระบบ KPI (รวม super_admin ถ้ามี) */
     public function levelCodes(): array
     {

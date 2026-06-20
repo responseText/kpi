@@ -32,7 +32,7 @@ class KpiFlowTest extends TestCase
 
         // 1) สร้างยุทธศาสตร์
         $this->actingAs($admin)->post('/strategies', [
-            'year' => 2569, 'code' => 'ย.1', 'name' => 'ยุทธศาสตร์ทดสอบ', 'status' => 'enable',
+            'year' => 2569, 'level' => 'hospital', 'code' => 'ย.1', 'name' => 'ยุทธศาสตร์ทดสอบ', 'status' => 'enable',
         ])->assertRedirect('/strategies');
         $strategy = \App\Models\KpiStrategy::where('name', 'ยุทธศาสตร์ทดสอบ')->firstOrFail();
 
@@ -84,6 +84,38 @@ class KpiFlowTest extends TestCase
         $this->actingAs($admin)->get('/reports?year=2569')->assertOk();
         $this->actingAs($admin)->get('/permissions')->assertOk();
         $this->actingAs($admin)->get('/level-managers')->assertOk();
+    }
+
+    public function test_strategy_belongs_to_a_level_and_name_unique_per_level(): void
+    {
+        $admin = $this->admin();
+
+        // สร้างยุทธศาสตร์ระดับโรงพยาบาล ปี 2569
+        $this->actingAs($admin)->post('/strategies', [
+            'year' => 2569, 'level' => 'hospital', 'name' => 'ยุทธศาสตร์ระดับซ้ำ', 'status' => 'enable',
+        ])->assertRedirect('/strategies');
+        $this->assertDatabaseHas('kpi_strategies', [
+            'year' => 2569, 'level' => 'hospital', 'name' => 'ยุทธศาสตร์ระดับซ้ำ',
+        ]);
+
+        // ชื่อซ้ำ + ปีเดียวกัน + ระดับเดียวกัน → ถูกปฏิเสธ
+        $this->actingAs($admin)->post('/strategies', [
+            'year' => 2569, 'level' => 'hospital', 'name' => 'ยุทธศาสตร์ระดับซ้ำ', 'status' => 'enable',
+        ])->assertSessionHasErrors('name');
+
+        // ชื่อเดียวกัน + ปีเดียวกัน แต่คนละระดับ (กระทรวง) → อนุญาต
+        $this->actingAs($admin)->post('/strategies', [
+            'year' => 2569, 'level' => 'ministry', 'name' => 'ยุทธศาสตร์ระดับซ้ำ', 'status' => 'enable',
+        ])->assertRedirect('/strategies');
+        $this->assertEquals(
+            2,
+            \App\Models\KpiStrategy::where('year', 2569)->where('name', 'ยุทธศาสตร์ระดับซ้ำ')->count()
+        );
+
+        // ขาดระดับ → validation ไม่ผ่าน
+        $this->actingAs($admin)->post('/strategies', [
+            'year' => 2569, 'name' => 'ยุทธศาสตร์ไม่มีระดับ', 'status' => 'enable',
+        ])->assertSessionHasErrors('level');
     }
 
     public function test_permission_denied_without_access(): void
@@ -431,5 +463,69 @@ class KpiFlowTest extends TestCase
             'password_confirmation' => 'NewPass12345',
         ])->assertRedirect('/profile');
         $this->assertTrue(Hash::check('NewPass12345', $user->fresh()->password));
+    }
+
+    public function test_user_management_menu_restricted_to_super_admin(): void
+    {
+        $allId = KpiLevel::where('code', KpiLevel::ADMIN_ALL)->value('id');
+
+        // ผู้ดูแลระบบสูงสุด → เข้าเมนู "จัดการผู้ใช้งาน" ได้
+        $this->actingAs($this->admin())->get('/users')->assertOk();
+
+        // ผู้ดูแลตัวชี้วัดทั้งหมด (ไม่ใช่ super admin) → ถูกปฏิเสธ (403) เพราะเมนูนี้เฉพาะผู้ดูแลระบบสูงสุด
+        $adminAll = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+        UserOnLevel::create(['user_id' => $adminAll->id, 'alias_system' => 'kpi', 'level_id' => $allId, 'is_super_admin' => false]);
+        $this->actingAs($adminAll->fresh())->get('/users')->assertForbidden();
+
+        // ผู้ใช้ทั่วไป → ถูกปฏิเสธ (403)
+        $plain = User::whereNotIn('id', [1, 2, $adminAll->id])->orderBy('id')->firstOrFail();
+        $this->actingAs($plain->fresh())->get('/users')->assertForbidden();
+    }
+
+    public function test_super_admin_manages_other_user_password_status_and_level(): void
+    {
+        $admin = $this->admin();
+        $target = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+        $ownerId = KpiLevel::where('code', KpiLevel::OWNER)->value('id');
+        $superId = KpiLevel::where('code', KpiLevel::SUPER_ADMIN)->value('id');
+
+        $target->forceFill(['status' => 'enable'])->save();
+        $this->actingAs($admin)->get("/users/{$target->id}/edit")->assertOk();
+
+        // อัปเดตสถานะ (ปิดใช้งาน) + ระดับ (ผู้รับผิดชอบ)
+        $this->actingAs($admin)->put("/users/{$target->id}", [
+            'status' => 'disable',
+            'kpi_level_ids' => [$ownerId],
+        ])->assertRedirect(route('users.edit', $target));
+        $this->assertEquals('disable', $target->fresh()->status);
+        $this->assertContains('indicator_owner', $target->fresh()->kpiLevels()->pluck('code')->all());
+
+        // รีเซ็ตรหัสผ่าน (ผู้ดูแลระบบสูงสุดตั้งให้ได้โดยไม่ต้องใช้รหัสเดิม)
+        $this->actingAs($admin)->put("/users/{$target->id}/password", [
+            'password' => 'ResetPass12345',
+            'password_confirmation' => 'ResetPass12345',
+        ])->assertRedirect(route('users.edit', $target));
+        $this->assertTrue(Hash::check('ResetPass12345', $target->fresh()->password));
+
+        // ยืนยันรหัสผ่านไม่ตรง → ถูกปฏิเสธ
+        $this->actingAs($admin)->put("/users/{$target->id}/password", [
+            'password' => 'AnotherPass123',
+            'password_confirmation' => 'mismatch',
+        ])->assertSessionHasErrors('password');
+
+        // ห้ามกำหนดบทบาทผู้ดูแลระบบสูงสุดผ่านหน้านี้
+        $this->actingAs($admin)->put("/users/{$target->id}", [
+            'status' => 'enable',
+            'kpi_level_ids' => [$superId],
+        ])->assertSessionHas('error');
+        $this->assertFalse($target->fresh()->is_super_admin);
+
+        // ห้ามจัดการบัญชีของผู้ดูแลระบบสูงสุด (user 1)
+        $this->actingAs($admin)->put('/users/1', ['status' => 'disable', 'kpi_level_ids' => []])
+            ->assertSessionHas('error');
+        $this->assertEquals('enable', User::find(1)->status);
+        $this->actingAs($admin)->put('/users/1/password', [
+            'password' => 'HackSuper12345', 'password_confirmation' => 'HackSuper12345',
+        ])->assertSessionHas('error');
     }
 }

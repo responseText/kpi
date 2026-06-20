@@ -30,10 +30,11 @@ class StrategyController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $year = $request->integer('year') ?: null;
-        $strategies = $this->strategies->paginateByYear($year);
+        $level = $request->string('level')->toString() ?: null;
+        $strategies = $this->strategies->paginateByYear($year, $level);
         $years = $this->strategies->availableYears();
 
-        return view('strategies.index', compact('strategies', 'years', 'year'));
+        return view('strategies.index', compact('strategies', 'years', 'year', 'level'));
     }
 
     public function create(): View

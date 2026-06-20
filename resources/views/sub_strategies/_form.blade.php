@@ -8,7 +8,7 @@
         <option value="">— เลือกยุทธศาสตร์ —</option>
         @foreach ($strategyOptions as $opt)
             <option value="{{ $opt->id }}" @selected(old('strategy_id', $ss->strategy_id ?? '') == $opt->id)>
-                [{{ $opt->year }}] {{ $opt->name }}
+                [{{ $opt->year }} · {{ $opt->level_label }}] {{ $opt->name }}
             </option>
         @endforeach
     </x-form.select>

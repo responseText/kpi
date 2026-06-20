@@ -15,12 +15,14 @@ class StrategyRepository extends BaseRepository implements StrategyRepositoryInt
         return new KpiStrategy();
     }
 
-    public function paginateByYear(?int $year, int $perPage = 20): LengthAwarePaginator
+    public function paginateByYear(?int $year, ?string $level = null, int $perPage = 20): LengthAwarePaginator
     {
         return $this->query()
             ->withCount('subStrategies')
             ->when($year, fn ($q) => $q->where('year', $year))
+            ->when($level, fn ($q) => $q->where('level', $level))
             ->orderByDesc('year')
+            ->orderBy('level')
             ->orderBy('orderby')
             ->paginate($perPage);
     }

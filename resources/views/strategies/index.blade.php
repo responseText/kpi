@@ -2,12 +2,19 @@
 
 <x-layouts.app title="ยุทธศาสตร์" header="ยุทธศาสตร์">
     <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <form method="GET" class="flex items-center gap-2">
+        <form method="GET" class="flex flex-wrap items-center gap-2">
             <label class="text-sm text-slate-600">ปี</label>
             <select name="year" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="">ทั้งหมด</option>
                 @foreach ($years as $y)
                     <option value="{{ $y }}" @selected($y == $year)>{{ $y }}</option>
+                @endforeach
+            </select>
+            <label class="text-sm text-slate-600">ระดับ</label>
+            <select name="level" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="">ทุกระดับ</option>
+                @foreach (\App\Models\KpiStrategy::LEVELS as $k => $v)
+                    <option value="{{ $k }}" @selected(($level ?? '') === $k)>{{ $v }}</option>
                 @endforeach
             </select>
         </form>
@@ -23,6 +30,7 @@
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                         <th class="px-5 py-3">ปี</th>
+                        <th class="px-5 py-3">ระดับ</th>
                         <th class="px-5 py-3">รหัส</th>
                         <th class="px-5 py-3">ชื่อยุทธศาสตร์</th>
                         <th class="px-5 py-3 text-center">กลยุทธ์</th>
@@ -34,6 +42,9 @@
                     @forelse ($strategies as $s)
                         <tr class="hover:bg-slate-50">
                             <td class="px-5 py-3 font-medium text-slate-700">{{ $s->year }}</td>
+                            <td class="px-5 py-3">
+                                <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">{{ $s->level_label }}</span>
+                            </td>
                             <td class="px-5 py-3 text-slate-500">{{ $s->code ?: '-' }}</td>
                             <td class="px-5 py-3 text-slate-800">{{ $s->name }}</td>
                             <td class="px-5 py-3 text-center text-slate-600">{{ $s->sub_strategies_count }}</td>
@@ -57,7 +68,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-5 py-10 text-center text-slate-400">ยังไม่มีข้อมูลยุทธศาสตร์</td></tr>
+                        <tr><td colspan="7" class="px-5 py-10 text-center text-slate-400">ยังไม่มีข้อมูลยุทธศาสตร์</td></tr>
                     @endforelse
                 </tbody>
             </table>

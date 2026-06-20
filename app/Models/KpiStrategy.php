@@ -15,8 +15,11 @@ class KpiStrategy extends Model
 
     protected $table = 'kpi_strategies';
 
+    /** ระดับตัวชี้วัดของยุทธศาสตร์ — ใช้ชุดเดียวกับตัวชี้วัด (hospital/province/ministry) */
+    public const LEVELS = KpiIndicator::LEVELS;
+
     protected $fillable = [
-        'year', 'code', 'name', 'description', 'orderby', 'status',
+        'year', 'level', 'code', 'name', 'description', 'orderby', 'status',
     ];
 
     protected $casts = [
@@ -36,5 +39,15 @@ class KpiStrategy extends Model
     public function scopeForYear($query, int $year)
     {
         return $query->where('year', $year);
+    }
+
+    public function scopeLevel($query, string $level)
+    {
+        return $query->where('level', $level);
+    }
+
+    public function getLevelLabelAttribute(): string
+    {
+        return self::LEVELS[$this->level] ?? $this->level;
     }
 }

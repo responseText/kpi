@@ -13,6 +13,7 @@ use App\Http\Controllers\ResultController;
 use App\Http\Controllers\StrategyController;
 use App\Http\Controllers\SubStrategyController;
 use App\Http\Controllers\TargetController;
+use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
 // ยุทธศาสตร์
@@ -52,3 +53,9 @@ Route::get('reports', [ReportController::class, 'index'])->name('reports.index')
 Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
 Route::get('permissions/{user}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
 Route::put('permissions/{user}', [PermissionController::class, 'update'])->name('permissions.update');
+
+// จัดการผู้ใช้งาน (เปลี่ยนรหัสผ่าน / สถานะ / ระดับ — เฉพาะผู้ดูแลระบบสูงสุด)
+Route::get('users', [UserManagementController::class, 'index'])->name('users.index');
+Route::get('users/{user}/edit', [UserManagementController::class, 'edit'])->name('users.edit');
+Route::put('users/{user}', [UserManagementController::class, 'update'])->name('users.update');
+Route::put('users/{user}/password', [UserManagementController::class, 'updatePassword'])->name('users.password');

@@ -2,6 +2,14 @@
 
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <x-form.input name="year" label="ปี พ.ศ." type="number" :value="$s->year ?? (now()->year + 543)" :required="true" help="เช่น 2569" />
+    <x-form.select name="level" label="ระดับตัวชี้วัด" :required="true" help="1 ยุทธศาสตร์ สังกัด 1 ระดับ">
+        @foreach (\App\Models\KpiStrategy::LEVELS as $key => $label)
+            <option value="{{ $key }}" @selected(old('level', $s->level ?? 'hospital') === $key)>{{ $label }}</option>
+        @endforeach
+    </x-form.select>
+</div>
+
+<div class="mt-4">
     <x-form.input name="code" label="รหัสยุทธศาสตร์" :value="$s->code ?? ''" placeholder="เช่น ยุทธศาสตร์ที่ 1" />
 </div>
 

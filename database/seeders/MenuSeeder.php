@@ -23,6 +23,7 @@ class MenuSeeder extends Seeder
             ['code' => 'kpi.level_manager', 'name' => 'ผู้รับผิดชอบระดับ', 'route' => 'level-managers.index', 'icon' => 'level'],
             ['code' => 'kpi.report', 'name' => 'รายงานสรุปผล', 'route' => 'reports.index', 'icon' => 'report'],
             ['code' => 'kpi.permission', 'name' => 'สิทธิ์ผู้ใช้งาน', 'route' => 'permissions.index', 'icon' => 'permission'],
+            ['code' => 'kpi.user', 'name' => 'จัดการผู้ใช้งาน', 'route' => 'users.index', 'icon' => 'user'],
         ];
 
         foreach ($menus as $i => $menu) {
