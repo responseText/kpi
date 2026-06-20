@@ -16,6 +16,8 @@ class ResultRequest extends FormRequest
         return [
             'results' => ['required', 'array', 'min:1'],
             'results.*.result_value' => ['nullable', 'numeric'],
+            'results.*.numerator_value' => ['nullable', 'numeric'],
+            'results.*.denominator_value' => ['nullable', 'numeric'],
             'results.*.result_text' => ['nullable', 'in:pass,fail'],
             'results.*.note' => ['nullable', 'string', 'max:1000'],
         ];

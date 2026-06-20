@@ -23,12 +23,15 @@ class KpiResult extends Model
     ];
 
     protected $fillable = [
-        'target_id', 'indicator_id', 'result_value', 'result_text',
-        'pass_status', 'note', 'recorded_by', 'recorded_at',
+        'target_id', 'indicator_id', 'result_value', 'numerator_value',
+        'denominator_value', 'result_text', 'pass_status', 'note',
+        'recorded_by', 'recorded_at',
     ];
 
     protected $casts = [
         'result_value' => 'decimal:2',
+        'numerator_value' => 'decimal:4',
+        'denominator_value' => 'decimal:4',
         'recorded_at' => 'datetime',
     ];
 

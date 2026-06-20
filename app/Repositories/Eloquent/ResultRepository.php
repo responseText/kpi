@@ -12,7 +12,7 @@ class ResultRepository extends BaseRepository implements ResultRepositoryInterfa
 {
     protected function makeModel(): Model
     {
-        return new KpiResult();
+        return new KpiResult;
     }
 
     public function record(KpiTarget $target, array $data, int $recordedBy): KpiResult
@@ -32,6 +32,8 @@ class ResultRepository extends BaseRepository implements ResultRepositoryInterfa
             [
                 'indicator_id' => $target->indicator_id,
                 'result_value' => $resultValue,
+                'numerator_value' => $data['numerator_value'] ?? null,
+                'denominator_value' => $data['denominator_value'] ?? null,
                 'result_text' => $resultText,
                 'pass_status' => $status,
                 'note' => $data['note'] ?? null,

@@ -64,25 +64,40 @@ class ResultController extends Controller implements HasMiddleware
         $rows = $request->validated()['results'];
         $userId = (int) $request->user()->id;
 
+        // ตัวชี้วัดประเภท A/B → ผู้ใช้กรอก A,B แล้วระบบคำนวณ result_value ให้เอง
+        $usesAb = $indicator->usesNumeratorDenominator();
+
         // map target_id -> target (เฉพาะที่เป็นของตัวชี้วัดนี้)
         $targetsById = $indicator->targets()->get()->keyBy('id');
 
-        DB::transaction(function () use ($rows, $targetsById, $userId) {
+        DB::transaction(function () use ($rows, $targetsById, $userId, $indicator, $usesAb) {
             foreach ($rows as $targetId => $row) {
                 $target = $targetsById->get((int) $targetId);
                 if (! $target) {
                     continue;
                 }
 
-                // ข้ามแถวที่ไม่ได้กรอกอะไรเลย
-                $value = $row['result_value'] ?? null;
+                $numerator = $usesAb ? ($row['numerator_value'] ?? null) : null;
+                $denominator = $usesAb ? ($row['denominator_value'] ?? null) : null;
                 $text = $row['result_text'] ?? null;
-                if (($value === null || $value === '') && ($text === null || $text === '') && empty($row['note'])) {
+
+                // ค่าผลงาน: ประเภท A/B → คำนวณจาก A,B ตามสูตร; ที่เหลือ → ค่าที่กรอกโดยตรง
+                $value = $usesAb
+                    ? $indicator->computeResultValue($numerator, $denominator)
+                    : ($row['result_value'] ?? null);
+
+                // ข้ามแถวที่ไม่ได้กรอกอะไรเลย
+                $hasAb = ($numerator !== null && $numerator !== '') || ($denominator !== null && $denominator !== '');
+                $hasValue = ($value !== null && $value !== '');
+                $hasText = ($text !== null && $text !== '');
+                if (! $hasAb && ! $hasValue && ! $hasText && empty($row['note'])) {
                     continue;
                 }
 
                 $this->results->record($target, [
                     'result_value' => ($value === '' ? null : $value),
+                    'numerator_value' => ($numerator === '' ? null : $numerator),
+                    'denominator_value' => ($denominator === '' ? null : $denominator),
                     'result_text' => ($text === '' ? null : $text),
                     'note' => $row['note'] ?? null,
                 ], $userId);

@@ -47,7 +47,7 @@
     <x-form.select name="unit" label="หน่วยวัด" help="เลือกตามกลุ่ม KPI">
         <option value="">— ไม่ระบุ —</option>
         @foreach ($unitGroups as $groupCode => $groupUnits)
-            <optgroup label="{{ \App\Models\KpiUnit::GROUPS[$groupCode] ?? $groupCode }}">
+            <optgroup data-group="{{ $groupCode }}" label="{{ \App\Models\KpiUnit::GROUPS[$groupCode] ?? $groupCode }}">
                 @foreach ($groupUnits as $unitOption)
                     @if ($currentUnit === $unitOption->name) @php $knownUnit = true; @endphp @endif
                     <option value="{{ $unitOption->name }}" @selected($currentUnit === $unitOption->name)>{{ $unitOption->name }}</option>
@@ -63,6 +63,112 @@
 <p class="mt-2 rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
     ระบบจะสร้างช่วงเวลาเก็บข้อมูลให้อัตโนมัติตาม “แบบปี” และ “การเก็บผลงาน” — กำหนดค่าเป้าหมายได้ที่เมนู “กำหนดค่าเป้าหมาย”
 </p>
+
+{{-- ประเภทการวัด (Measurement Type) + เงื่อนไขตามหลักการบริหารผลงาน --}}
+@php
+    $measurementType = old('measurement_type', $ind->measurement_type ?? '');
+    $numeratorLabel = old('numerator_label', $ind->numerator_label ?? '');
+    $denominatorLabel = old('denominator_label', $ind->denominator_label ?? '');
+    $formulaVal = old('formula', $ind->formula ?? '');
+    $factorVal = old('factor', $ind->factor ?? '');
+@endphp
+<div class="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4" data-measurement>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <x-form.select name="measurement_type" label="ประเภทการวัด (Measurement Type)"
+            help="เลือกตามลักษณะการวัดผล — ระบบจะปรับช่องกรอกและกรองหน่วยวัดให้อัตโนมัติ">
+            <option value="">— เลือกประเภทการวัด —</option>
+            @foreach (\App\Support\MeasurementType::optgroups() as $gCode => $types)
+                <optgroup label="{{ \App\Models\KpiUnit::GROUPS[$gCode] ?? $gCode }}">
+                    @foreach ($types as $tCode => $tLabel)
+                        <option value="{{ $tCode }}" @selected($measurementType === $tCode)>{{ $tLabel }}</option>
+                    @endforeach
+                </optgroup>
+            @endforeach
+        </x-form.select>
+        <div class="flex items-end">
+            <p class="w-full rounded-lg bg-white px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-200" data-formula-hint>
+                เลือกประเภทการวัดเพื่อดูสูตรมาตรฐาน
+            </p>
+        </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div data-field="a" hidden>
+            <x-form.input name="numerator_label" label="นิยามตัวตั้ง (A)" :value="$numeratorLabel" help="เช่น จำนวนที่ผ่านเกณฑ์" />
+        </div>
+        <div data-field="b" hidden>
+            <x-form.input name="denominator_label" label="นิยามตัวหาร (B)" :value="$denominatorLabel" help="เช่น จำนวนทั้งหมด" />
+        </div>
+        <div data-field="factor" hidden>
+            <x-form.input name="factor" label="ค่าคงที่ K" type="number" step="any" :value="$factorVal" help="เช่น 100000 (ต่อแสนประชากร)" />
+        </div>
+    </div>
+
+    <div class="mt-4" data-field="formula" hidden>
+        <x-form.input name="formula" label="สูตร/เกณฑ์การคำนวณ" :value="$formulaVal"
+            help="ระบุเกณฑ์/สูตรการคำนวณของตัวชี้วัดนี้" />
+    </div>
+</div>
+
+@push('scripts')
+    <script>
+        (function () {
+            const meta = @json(\App\Support\MeasurementType::META);
+            const root = document.querySelector('[data-measurement]');
+            if (!root) return;
+
+            const typeSel = root.querySelector('select[name="measurement_type"]');
+            const hint = root.querySelector('[data-formula-hint]');
+            const fields = {
+                a: root.querySelector('[data-field="a"]'),
+                b: root.querySelector('[data-field="b"]'),
+                factor: root.querySelector('[data-field="factor"]'),
+                formula: root.querySelector('[data-field="formula"]'),
+            };
+            const formulaLabelEl = fields.formula ? fields.formula.querySelector('label') : null;
+            const formulaLabelDefault = formulaLabelEl ? formulaLabelEl.textContent : '';
+            const unitSel = document.getElementById('unit');
+
+            function toggle(wrapper, show) {
+                if (!wrapper) return;
+                wrapper.hidden = !show;
+                if (!show) {
+                    wrapper.querySelectorAll('input, textarea, select').forEach(el => { el.value = ''; });
+                }
+            }
+
+            // กรองหน่วยวัดให้เหลือเฉพาะกลุ่มของประเภทที่เลือก (ไม่ซ่อนกลุ่มของค่าที่เลือกไว้แล้ว)
+            function filterUnits(group) {
+                if (!unitSel) return;
+                const selected = unitSel.options[unitSel.selectedIndex] || null;
+                unitSel.querySelectorAll('optgroup').forEach(og => {
+                    const keep = !group || og.dataset.group === group || (selected && og.contains(selected));
+                    og.hidden = !keep;
+                    og.disabled = !keep;
+                });
+            }
+
+            function apply() {
+                const m = meta[typeSel.value] || null;
+                toggle(fields.a, !!(m && (m.requires_a || m.allows_ab)));
+                toggle(fields.b, !!(m && (m.requires_b || m.allows_ab)));
+                toggle(fields.factor, !!(m && m.requires_factor));
+                toggle(fields.formula, !!(m && m.requires_formula));
+
+                if (formulaLabelEl) {
+                    formulaLabelEl.textContent = (m && m.requires_formula && m.formula_label) ? m.formula_label : formulaLabelDefault;
+                }
+                if (hint) {
+                    hint.textContent = m ? ('สูตรมาตรฐาน: ' + m.formula + ' · กลุ่ม ' + (m.group || '')) : 'เลือกประเภทการวัดเพื่อดูสูตรมาตรฐาน';
+                }
+                filterUnits(m ? m.group : null);
+            }
+
+            typeSel.addEventListener('change', apply);
+            apply();
+        })();
+    </script>
+@endpush
 
 <div class="mt-4">
     <x-form.textarea name="description" label="นิยาม/รายละเอียด" :value="$ind->description ?? ''" />

@@ -24,8 +24,22 @@
                     <div><dt class="text-slate-400">แบบปี</dt><dd class="font-medium text-slate-700">{{ $indicator->year_type_label }} {{ $indicator->year }}</dd></div>
                     <div><dt class="text-slate-400">การเก็บผลงาน</dt><dd class="font-medium text-slate-700">{{ $indicator->period_type_label }}</dd></div>
                     <div><dt class="text-slate-400">หน่วยวัด</dt><dd class="font-medium text-slate-700">{{ $indicator->unit ?: '-' }}</dd></div>
-                    <div class="col-span-2"><dt class="text-slate-400">ยุทธศาสตร์ › กลยุทธ์</dt>
+                    @if ($indicator->measurement_type)
+                        <div><dt class="text-slate-400">ประเภทการวัด</dt>
+                            <dd class="font-medium text-slate-700">{{ $indicator->measurement_type_label }}
+                                <span class="text-xs text-slate-400">· {{ $indicator->measurement_group_label }}</span>
+                            </dd></div>
+                        <div><dt class="text-slate-400">สูตรคำนวณ</dt>
+                            <dd class="font-medium text-slate-700">{{ $indicator->formula_display ?: '-' }}</dd></div>
+                    @endif
+                    <div class="col-span-2 sm:col-span-3"><dt class="text-slate-400">ยุทธศาสตร์ › กลยุทธ์</dt>
                         <dd class="font-medium text-slate-700">{{ $indicator->subStrategy?->strategy?->name }} › {{ $indicator->subStrategy?->name }}</dd></div>
+                    @if ($indicator->numerator_label)
+                        <div class="col-span-2 sm:col-span-3 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3">
+                            <div><dt class="text-slate-400">ตัวตั้ง (A)</dt><dd class="font-medium text-slate-700">{{ $indicator->numerator_label }}</dd></div>
+                            <div><dt class="text-slate-400">ตัวหาร (B)</dt><dd class="font-medium text-slate-700">{{ $indicator->denominator_label ?: '-' }}</dd></div>
+                        </div>
+                    @endif
                 </dl>
                 @if ($indicator->description)
                     <div class="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-600">{{ $indicator->description }}</div>
@@ -57,6 +71,9 @@
                                     <td class="px-3 py-2 text-right text-slate-700">
                                         @php $r = $t->result; @endphp
                                         {{ $r ? ($t->operator === 'passfail' ? ($r->result_text === 'pass' ? 'ผ่าน' : 'ไม่ผ่าน') : ($r->result_value !== null ? rtrim(rtrim((string) $r->result_value, '0'), '.') : '-')) : '—' }}
+                                        @if ($r && $r->numerator_value !== null)
+                                            <div class="text-[11px] text-slate-400">{{ rtrim(rtrim((string) $r->numerator_value, '0'), '.') }} ÷ {{ $r->denominator_value !== null ? rtrim(rtrim((string) $r->denominator_value, '0'), '.') : '-' }}</div>
+                                        @endif
                                     </td>
                                     <td class="px-3 py-2 text-center"><x-status-badge :status="$t->result?->pass_status ?? 'pending'" /></td>
                                 </tr>
