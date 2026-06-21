@@ -13,11 +13,12 @@ class UserOnLevel extends Model
     protected $table = 'users_on_level';
 
     protected $fillable = [
-        'user_id', 'alias_system', 'level_id', 'is_super_admin',
+        'user_id', 'alias_system', 'level_id', 'year', 'is_super_admin',
     ];
 
     protected $casts = [
         'level_id' => 'integer',
+        'year' => 'integer',
         'is_super_admin' => 'boolean',
     ];
 

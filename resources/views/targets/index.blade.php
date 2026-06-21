@@ -1,4 +1,4 @@
-@php use App\Models\KpiIndicator; @endphp
+@php use App\Models\KpiIndicator; $user = auth()->user(); @endphp
 
 <x-layouts.app title="กำหนดค่าเป้าหมาย" header="กำหนดค่าเป้าหมาย">
     <form method="GET" class="mb-5 flex flex-wrap items-end gap-2">
@@ -51,7 +51,11 @@
                             <td class="px-5 py-3 text-slate-600">{{ $ind->period_type === 'quarterly' ? 'รายไตรมาส' : 'รายปี' }}</td>
                             <td class="px-5 py-3 text-center text-slate-600">{{ $ind->targets->count() }} ช่วง</td>
                             <td class="px-5 py-3 text-right">
-                                <x-btn :href="route('targets.edit', $ind)" variant="ghost"><x-icon name="target" class="w-4 h-4" /> กำหนดเป้าหมาย</x-btn>
+                                @if ($user->canManageIndicatorData('kpi.target', 'edit', $ind->level, $ind->year))
+                                    <x-btn :href="route('targets.edit', $ind)" variant="ghost"><x-icon name="target" class="w-4 h-4" /> กำหนดเป้าหมาย</x-btn>
+                                @else
+                                    <span class="text-xs text-slate-400">ดูอย่างเดียว</span>
+                                @endif
                             </td>
                         </tr>
                     @empty

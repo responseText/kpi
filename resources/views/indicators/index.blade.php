@@ -28,7 +28,7 @@
             <x-btn type="submit" variant="secondary">ค้นหา</x-btn>
         </form>
 
-        @if ($user->canMenu('kpi.indicator', 'create'))
+        @if ($user->canManageIndicatorData('kpi.indicator', 'create'))
             <x-btn :href="route('indicators.create')"><x-icon name="indicator" class="w-4 h-4" /> เพิ่มตัวชี้วัด</x-btn>
         @endif
     </div>
@@ -69,10 +69,10 @@
                             <td class="px-5 py-3">
                                 <div class="flex items-center justify-end gap-1">
                                     <x-btn :href="route('indicators.show', $ind)" variant="ghost">ดู</x-btn>
-                                    @if ($user->canMenu('kpi.indicator', 'edit'))
+                                    @if ($user->canManageIndicatorData('kpi.indicator', 'edit', $ind->level, $ind->year))
                                         <x-btn :href="route('indicators.edit', $ind)" variant="ghost">แก้ไข</x-btn>
                                     @endif
-                                    @if ($user->canMenu('kpi.indicator', 'delete'))
+                                    @if ($user->canManageIndicatorData('kpi.indicator', 'delete', $ind->level, $ind->year))
                                         <form method="POST" action="{{ route('indicators.destroy', $ind) }}" onsubmit="return confirm('ยืนยันลบตัวชี้วัดนี้?')">
                                             @csrf @method('DELETE')
                                             <x-btn type="submit" variant="ghost" class="!text-red-600 hover:!bg-red-50">ลบ</x-btn>

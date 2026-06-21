@@ -45,8 +45,9 @@ class PermissionController extends Controller implements HasMiddleware
         $menus = $this->permissions->menus('kpi');
         $current = $this->permissions->permissionsForUser($user->id);
         $levels = $this->permissions->assignableLevels();
+        $years = $this->permissions->assignableYears();
 
-        return view('permissions.edit', compact('user', 'menus', 'current', 'levels'));
+        return view('permissions.edit', compact('user', 'menus', 'current', 'levels', 'years'));
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -59,6 +60,8 @@ class PermissionController extends Controller implements HasMiddleware
         $validated = $request->validate([
             'kpi_level_ids' => ['array'],
             'kpi_level_ids.*' => ['integer', 'exists:kpi_level,id'],
+            'kpi_level_years' => ['array'],
+            'kpi_level_years.*' => ['array'],
             'permissions' => ['array'],
             'permissions.*.can_view' => ['nullable', 'boolean'],
             'permissions.*.can_create' => ['nullable', 'boolean'],
@@ -73,8 +76,8 @@ class PermissionController extends Controller implements HasMiddleware
             return back()->with('error', 'ไม่สามารถกำหนดบทบาทผู้ดูแลระบบสูงสุดผ่านหน้านี้ได้');
         }
 
-        // เก็บบทบาทที่ users_on_level (แยกตามระบบ, ได้หลายบทบาท) — ผ่าน UI กำหนด super admin ไม่ได้
-        $this->permissions->setUserKpiLevels($user->id, $levelIds);
+        // เก็บบทบาทที่ users_on_level (แยกตามระบบ, ได้หลายบทบาท + ปีที่รับผิดชอบ) — ผ่าน UI กำหนด super admin ไม่ได้
+        $this->permissions->setUserKpiLevels($user->id, $levelIds, $validated['kpi_level_years'] ?? []);
 
         // เมนูทั้งหมดของระบบ เพื่อให้ลบสิทธิ์ที่ไม่ติ๊กออกด้วย
         $rows = [];

@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\KpiIndicator;
 use App\Models\KpiLevel;
 use App\Models\KpiResult;
-use App\Models\KpiTarget;
+use App\Models\KpiStrategy;
+use App\Models\KpiSubStrategy;
+use App\Models\Menu;
 use App\Models\User;
 use App\Models\UserOnLevel;
+use App\Models\UserOnMenu;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -34,14 +37,14 @@ class KpiFlowTest extends TestCase
         $this->actingAs($admin)->post('/strategies', [
             'year' => 2569, 'level' => 'hospital', 'code' => 'ย.1', 'name' => 'ยุทธศาสตร์ทดสอบ', 'status' => 'enable',
         ])->assertRedirect('/strategies');
-        $strategy = \App\Models\KpiStrategy::where('name', 'ยุทธศาสตร์ทดสอบ')->firstOrFail();
+        $strategy = KpiStrategy::where('name', 'ยุทธศาสตร์ทดสอบ')->firstOrFail();
 
         // 2) สร้างกลยุทธ์ + ผู้ตรวจสอบ
         $this->actingAs($admin)->post('/sub-strategies', [
             'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์ทดสอบ', 'status' => 'enable',
             'reviewers' => [$reviewerId],
         ])->assertRedirect('/sub-strategies');
-        $subStrategy = \App\Models\KpiSubStrategy::where('name', 'กลยุทธ์ทดสอบ')->firstOrFail();
+        $subStrategy = KpiSubStrategy::where('name', 'กลยุทธ์ทดสอบ')->firstOrFail();
         $this->assertEquals(1, $subStrategy->reviewers()->count());
 
         // 3) สร้างตัวชี้วัด (ปีงบประมาณ + รายไตรมาส) → ต้องได้ 4 targets
@@ -109,7 +112,7 @@ class KpiFlowTest extends TestCase
         ])->assertRedirect('/strategies');
         $this->assertEquals(
             2,
-            \App\Models\KpiStrategy::where('year', 2569)->where('name', 'ยุทธศาสตร์ระดับซ้ำ')->count()
+            KpiStrategy::where('year', 2569)->where('name', 'ยุทธศาสตร์ระดับซ้ำ')->count()
         );
 
         // ขาดระดับ → validation ไม่ผ่าน
@@ -130,10 +133,10 @@ class KpiFlowTest extends TestCase
     public function test_result_recording_restricted_to_owner_or_admin(): void
     {
         // เตรียมตัวชี้วัดระดับโรงพยาบาล
-        $strategy = \App\Models\KpiStrategy::create([
+        $strategy = KpiStrategy::create([
             'year' => 2569, 'code' => 'RT', 'name' => 'ยุทธศาสตร์สิทธิ์ผล', 'status' => 'enable',
         ]);
-        $sub = \App\Models\KpiSubStrategy::create([
+        $sub = KpiSubStrategy::create([
             'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์สิทธิ์ผล', 'status' => 'enable',
         ]);
         $indicator = KpiIndicator::create([
@@ -143,8 +146,8 @@ class KpiFlowTest extends TestCase
 
         // ให้สิทธิ์เมนู "บันทึกผลงาน" แก่ผู้ใช้ทั่วไป แต่ยังไม่ใช่ผู้รับผิดชอบ
         $stranger = User::where('id', '!=', 1)->where('id', '!=', 2)->firstOrFail();
-        $resultMenu = \App\Models\Menu::where('code', 'kpi.result')->firstOrFail();
-        \App\Models\UserOnMenu::updateOrCreate(
+        $resultMenu = Menu::where('code', 'kpi.result')->firstOrFail();
+        UserOnMenu::updateOrCreate(
             ['user_id' => $stranger->id, 'menu_id' => $resultMenu->id],
             ['alias_system' => 'kpi', 'can_view' => true, 'can_edit' => true],
         );
@@ -163,10 +166,10 @@ class KpiFlowTest extends TestCase
     public function test_results_index_lists_only_recordable_indicators(): void
     {
         // เตรียมตัวชี้วัด 2 ระดับ (ใช้ token ร่วม 'IDXMARK' เพื่อค้นหาให้แคบ ไม่ปนข้อมูลเดิม)
-        $strategy = \App\Models\KpiStrategy::create([
+        $strategy = KpiStrategy::create([
             'year' => 2569, 'code' => 'IX', 'name' => 'ยุทธศาสตร์รายการบันทึกผล', 'status' => 'enable',
         ]);
-        $sub = \App\Models\KpiSubStrategy::create([
+        $sub = KpiSubStrategy::create([
             'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์รายการบันทึกผล', 'status' => 'enable',
         ]);
         $hospital = KpiIndicator::create([
@@ -180,8 +183,8 @@ class KpiFlowTest extends TestCase
 
         // ผู้ใช้ทั่วไป มีสิทธิ์ "ดู" เมนูบันทึกผล แต่ยังไม่มีบทบาท/ไม่ใช่ผู้รับผิดชอบ
         $stranger = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
-        $resultMenu = \App\Models\Menu::where('code', 'kpi.result')->firstOrFail();
-        \App\Models\UserOnMenu::updateOrCreate(
+        $resultMenu = Menu::where('code', 'kpi.result')->firstOrFail();
+        UserOnMenu::updateOrCreate(
             ['user_id' => $stranger->id, 'menu_id' => $resultMenu->id],
             ['alias_system' => 'kpi', 'can_view' => true, 'can_edit' => true],
         );
@@ -213,10 +216,10 @@ class KpiFlowTest extends TestCase
     public function test_indicators_menu_restricted_to_indicator_admins_by_level(): void
     {
         // ตัวชี้วัด 2 ระดับ (token 'INDMARK')
-        $strategy = \App\Models\KpiStrategy::create([
+        $strategy = KpiStrategy::create([
             'year' => 2569, 'code' => 'IM', 'name' => 'ยุทธศาสตร์จัดการตัวชี้วัด', 'status' => 'enable',
         ]);
-        $sub = \App\Models\KpiSubStrategy::create([
+        $sub = KpiSubStrategy::create([
             'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์จัดการตัวชี้วัด', 'status' => 'enable',
         ]);
         $hospital = KpiIndicator::create([
@@ -239,6 +242,17 @@ class KpiFlowTest extends TestCase
         UserOnLevel::create(['user_id' => $hospitalAdmin->id, 'alias_system' => 'kpi', 'level_id' => $hospitalLevelId, 'is_super_admin' => false]);
         $this->actingAs($hospitalAdmin->fresh())->get('/indicators?search=INDMARK')
             ->assertOk()->assertSee('ตชว.รพ')->assertDontSee('ตชว.กระทรวง');
+
+        // ยังไม่ได้กำหนดสิทธิ์เมนู "เพิ่ม/แก้ไข" → ดูได้อย่างเดียว (เปิดฟอร์มเพิ่ม/แก้ไม่ได้)
+        $this->actingAs($hospitalAdmin->fresh())->get('/indicators/create')->assertForbidden();
+        $this->actingAs($hospitalAdmin->fresh())->get("/indicators/{$hospital->id}/edit")->assertForbidden();
+
+        // กำหนดสิทธิ์ action เมนูตัวชี้วัดให้ผู้ดูแล รพ. (บทบาทคุมขอบเขตระดับ, สิทธิ์เมนูคุมว่าทำ action ได้)
+        $indicatorMenu = Menu::where('code', 'kpi.indicator')->firstOrFail();
+        UserOnMenu::updateOrCreate(
+            ['user_id' => $hospitalAdmin->id, 'menu_id' => $indicatorMenu->id],
+            ['alias_system' => 'kpi', 'can_view' => true, 'can_create' => true, 'can_edit' => true, 'can_delete' => true],
+        );
 
         // ดู/แก้ตัวชี้วัดระดับ รพ. ได้ + ฟอร์มสร้างเปิดได้ แต่ระดับกระทรวงถูกปฏิเสธ (403)
         $this->actingAs($hospitalAdmin->fresh())->get('/indicators/create')->assertOk();
@@ -268,10 +282,10 @@ class KpiFlowTest extends TestCase
     public function test_targets_menu_restricted_to_indicator_admins_by_level(): void
     {
         // ตัวชี้วัด 2 ระดับ (token 'TGTMARK' เพื่อค้นหาให้แคบ)
-        $strategy = \App\Models\KpiStrategy::create([
+        $strategy = KpiStrategy::create([
             'year' => 2569, 'code' => 'TG', 'name' => 'ยุทธศาสตร์ค่าเป้าหมาย', 'status' => 'enable',
         ]);
-        $sub = \App\Models\KpiSubStrategy::create([
+        $sub = KpiSubStrategy::create([
             'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์ค่าเป้าหมาย', 'status' => 'enable',
         ]);
         $hospital = KpiIndicator::create([
@@ -295,6 +309,16 @@ class KpiFlowTest extends TestCase
         $this->actingAs($hospitalAdmin->fresh())->get('/targets?search=TGTMARK')
             ->assertOk()->assertSee('ตชว.รพ')->assertDontSee('ตชว.กระทรวง');
 
+        // ยังไม่ได้กำหนดสิทธิ์ "แก้ไข" เมนูค่าเป้าหมาย → ดูได้อย่างเดียว (กำหนดค่าเป้าหมายไม่ได้)
+        $this->actingAs($hospitalAdmin->fresh())->get("/targets/{$hospital->id}/edit")->assertForbidden();
+
+        // กำหนดสิทธิ์ "แก้ไข" เมนูค่าเป้าหมายให้ผู้ดูแล รพ.
+        $targetMenu = Menu::where('code', 'kpi.target')->firstOrFail();
+        UserOnMenu::updateOrCreate(
+            ['user_id' => $hospitalAdmin->id, 'menu_id' => $targetMenu->id],
+            ['alias_system' => 'kpi', 'can_view' => true, 'can_edit' => true],
+        );
+
         // กำหนดค่าเป้าหมายระดับ รพ. ได้ แต่ระดับกระทรวงถูกปฏิเสธ (403)
         $this->actingAs($hospitalAdmin->fresh())->get("/targets/{$hospital->id}/edit")->assertOk();
         $this->actingAs($hospitalAdmin->fresh())->get("/targets/{$ministry->id}/edit")->assertForbidden();
@@ -315,10 +339,10 @@ class KpiFlowTest extends TestCase
         }
 
         // สร้างตัวชี้วัดระดับโรงพยาบาลปี 2569
-        $strategy = \App\Models\KpiStrategy::create([
+        $strategy = KpiStrategy::create([
             'year' => 2569, 'code' => 'DB', 'name' => 'ยุทธศาสตร์เมนูแดชบอร์ด', 'status' => 'enable',
         ]);
-        $sub = \App\Models\KpiSubStrategy::create([
+        $sub = KpiSubStrategy::create([
             'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์เมนูแดชบอร์ด', 'status' => 'enable',
         ]);
         KpiIndicator::create([
@@ -340,8 +364,8 @@ class KpiFlowTest extends TestCase
         $this->actingAs($plain->fresh())->get('/monitor')->assertOk();
 
         // หน้ากำหนดสิทธิ์: ไม่มีแถวจัดการเมนูแดชบอร์ด แต่ยังมีเมนูอื่น (เช่น ตัวชี้วัด)
-        $dashboardMenu = \App\Models\Menu::where('code', 'kpi.dashboard')->firstOrFail();
-        $indicatorMenu = \App\Models\Menu::where('code', 'kpi.indicator')->firstOrFail();
+        $dashboardMenu = Menu::where('code', 'kpi.dashboard')->firstOrFail();
+        $indicatorMenu = Menu::where('code', 'kpi.indicator')->firstOrFail();
 
         $res = $this->actingAs($this->admin())->get("/permissions/{$plain->id}/edit");
         $res->assertOk();

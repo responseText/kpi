@@ -13,13 +13,13 @@
             <label class="text-sm text-slate-600">ระดับ</label>
             <select name="level" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="">ทุกระดับ</option>
-                @foreach (\App\Models\KpiStrategy::LEVELS as $k => $v)
+                @foreach ($levels as $k => $v)
                     <option value="{{ $k }}" @selected(($level ?? '') === $k)>{{ $v }}</option>
                 @endforeach
             </select>
         </form>
 
-        @if ($user->canMenu('kpi.strategy', 'create'))
+        @if ($user->canManageIndicatorData('kpi.strategy', 'create'))
             <x-btn :href="route('strategies.create')"><x-icon name="strategy" class="w-4 h-4" /> เพิ่มยุทธศาสตร์</x-btn>
         @endif
     </div>
@@ -55,10 +55,10 @@
                             </td>
                             <td class="px-5 py-3">
                                 <div class="flex items-center justify-end gap-1">
-                                    @if ($user->canMenu('kpi.strategy', 'edit'))
+                                    @if ($user->canManageIndicatorData('kpi.strategy', 'edit', $s->level, $s->year))
                                         <x-btn :href="route('strategies.edit', $s)" variant="ghost">แก้ไข</x-btn>
                                     @endif
-                                    @if ($user->canMenu('kpi.strategy', 'delete'))
+                                    @if ($user->canManageIndicatorData('kpi.strategy', 'delete', $s->level, $s->year))
                                         <form method="POST" action="{{ route('strategies.destroy', $s) }}" onsubmit="return confirm('ยืนยันลบยุทธศาสตร์นี้?')">
                                             @csrf @method('DELETE')
                                             <x-btn type="submit" variant="ghost" class="!text-red-600 hover:!bg-red-50">ลบ</x-btn>

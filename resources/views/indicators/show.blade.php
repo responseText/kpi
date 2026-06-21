@@ -4,13 +4,13 @@
     <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
         <x-btn :href="route('indicators.index')" variant="secondary">← กลับ</x-btn>
         <div class="flex gap-2">
-            @if ($user->canMenu('kpi.target', 'edit'))
+            @if ($user->canManageIndicatorData('kpi.target', 'edit', $indicator->level, $indicator->year))
                 <x-btn :href="route('targets.edit', $indicator)" variant="secondary"><x-icon name="target" class="w-4 h-4" /> กำหนดค่าเป้าหมาย</x-btn>
             @endif
             @if ($user->canMenu('kpi.result', 'edit') && $user->canRecordResultFor($indicator))
                 <x-btn :href="route('results.edit', $indicator)" variant="success"><x-icon name="result" class="w-4 h-4" /> บันทึกผลงาน</x-btn>
             @endif
-            @if ($user->canMenu('kpi.indicator', 'edit'))
+            @if ($user->canManageIndicatorData('kpi.indicator', 'edit', $indicator->level, $indicator->year))
                 <x-btn :href="route('indicators.edit', $indicator)"><x-icon name="indicator" class="w-4 h-4" /> แก้ไข</x-btn>
             @endif
         </div>

@@ -21,7 +21,6 @@
         @else
             {{-- สถานะการใช้งาน + ระดับ/บทบาท --}}
             <x-card :title="$user->display_name" :subtitle="'ชื่อผู้ใช้: ' . $user->name">
-                @php $selectedLevels = collect(old('kpi_level_ids', $user->kpiLevelIds()))->map(fn ($v) => (int) $v); @endphp
                 <form method="POST" action="{{ route('users.update', $user) }}">
                     @csrf
                     @method('PUT')
@@ -42,27 +41,10 @@
                         @error('status')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                     </div>
 
-                    {{-- ระดับ/บทบาทในระบบ --}}
+                    {{-- ระดับ/บทบาทในระบบ + ปีที่รับผิดชอบ --}}
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-slate-700 mb-2">ระดับ/บทบาทในระบบ KPI (เลือกได้มากกว่า 1)</label>
-                        <div class="space-y-2">
-                            @foreach ($levels as $level)
-                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
-                                    <input type="checkbox" name="kpi_level_ids[]" value="{{ $level->id }}"
-                                        @checked($selectedLevels->contains($level->id))
-                                        class="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                    <span>
-                                        <span class="block text-sm font-medium text-slate-800">{{ $level->name }}</span>
-                                        @if ($level->description)
-                                            <span class="block text-xs text-slate-500">{{ $level->description }}</span>
-                                        @endif
-                                    </span>
-                                </label>
-                            @endforeach
-                        </div>
-                        <p class="mt-2 text-xs text-slate-400">
-                            การจัดการสิทธิ์รายเมนูโดยละเอียด ทำได้ที่เมนู “สิทธิ์ผู้ใช้งาน”
-                        </p>
+                        @include('permissions._kpi_roles')
                     </div>
 
                     <div class="flex items-center gap-2">

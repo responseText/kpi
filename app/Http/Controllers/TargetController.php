@@ -54,7 +54,7 @@ class TargetController extends Controller implements HasMiddleware
 
     public function edit(Request $request, KpiIndicator $indicator): View
     {
-        $this->authorizeLevel($request, $indicator);
+        $this->authorizeManage($request, $indicator);
 
         $this->targets->syncPeriods($indicator);          // กันกรณีช่วงเวลายังไม่ถูกสร้าง
         $indicator->load('targets');
@@ -65,7 +65,7 @@ class TargetController extends Controller implements HasMiddleware
 
     public function update(TargetRequest $request, KpiIndicator $indicator): RedirectResponse
     {
-        $this->authorizeLevel($request, $indicator);
+        $this->authorizeManage($request, $indicator);
 
         $this->targets->saveTargets($indicator, $request->validated()['targets']);
 
@@ -73,15 +73,15 @@ class TargetController extends Controller implements HasMiddleware
     }
 
     /**
-     * อนุญาตเฉพาะผู้ดูแลที่ครอบคลุมระดับของตัวชี้วัดนี้
-     * (ผู้ดูแลระบบสูงสุด/ผู้ดูแลตัวชี้วัดทั้งหมด ผ่านทุกระดับ; ผู้ดูแลระดับ ผ่านเฉพาะระดับของตน)
+     * อนุญาตเฉพาะผู้ที่ได้รับสิทธิ์ "แก้ไข" เมนูกำหนดค่าเป้าหมาย และอยู่ในขอบเขตระดับที่ดูแล
+     * (ดูค่าเป้าหมายได้ที่หน้ารายละเอียดตัวชี้วัด; ถ้าไม่มีสิทธิ์แก้ไข → กำหนดค่าเป้าหมายไม่ได้)
      */
-    private function authorizeLevel(Request $request, KpiIndicator $indicator): void
+    private function authorizeManage(Request $request, KpiIndicator $indicator): void
     {
         abort_unless(
-            $request->user()->canManageIndicatorLevel($indicator->level),
+            $request->user()->canManageIndicatorData('kpi.target', 'edit', $indicator->level, (int) $indicator->year),
             403,
-            'คุณไม่มีสิทธิ์กำหนดค่าเป้าหมายของตัวชี้วัดระดับนี้ (เฉพาะผู้ดูแลระดับที่เกี่ยวข้องเท่านั้น)'
+            'คุณไม่มีสิทธิ์กำหนดค่าเป้าหมายของตัวชี้วัดระดับ/ปีนี้ (ตรวจสอบสิทธิ์เมนู ระดับ และปีที่รับผิดชอบ)'
         );
     }
 }

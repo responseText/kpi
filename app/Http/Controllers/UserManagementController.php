@@ -48,8 +48,9 @@ class UserManagementController extends Controller implements HasMiddleware
     public function edit(User $user): View
     {
         $levels = $this->permissions->assignableLevels();
+        $years = $this->permissions->assignableYears();
 
-        return view('users.edit', compact('user', 'levels'));
+        return view('users.edit', compact('user', 'levels', 'years'));
     }
 
     /** อัปเดตสถานะการใช้งาน + ระดับ/บทบาทของผู้ใช้ */
@@ -64,6 +65,8 @@ class UserManagementController extends Controller implements HasMiddleware
             'status' => ['required', 'in:enable,disable'],
             'kpi_level_ids' => ['array'],
             'kpi_level_ids.*' => ['integer', 'exists:kpi_level,id'],
+            'kpi_level_years' => ['array'],
+            'kpi_level_years.*' => ['array'],
         ], [], [
             'status' => 'สถานะการใช้งาน',
         ]);
@@ -76,7 +79,7 @@ class UserManagementController extends Controller implements HasMiddleware
         }
 
         $user->update(['status' => $validated['status']]);
-        $this->permissions->setUserKpiLevels($user->id, $levelIds);
+        $this->permissions->setUserKpiLevels($user->id, $levelIds, $validated['kpi_level_years'] ?? []);
 
         return redirect()->route('users.edit', $user)->with('success', "บันทึกข้อมูลผู้ใช้ {$user->name} เรียบร้อยแล้ว");
     }

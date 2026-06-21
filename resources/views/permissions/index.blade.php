@@ -30,10 +30,17 @@
                                         ผู้ดูแลระบบสูงสุด
                                     </span>
                                 @elseif ($u->kpiLevels()->isNotEmpty())
+                                    @php $roleGroups = $u->kpiLevelRows->filter(fn ($r) => $r->level)->groupBy('level_id'); @endphp
                                     <div class="flex flex-wrap items-center justify-center gap-1">
-                                        @foreach ($u->kpiLevels() as $lvl)
+                                        @foreach ($roleGroups as $rows)
+                                            @php
+                                                $lvl = $rows->first()->level;
+                                                $years = $rows->pluck('year');
+                                                $yearLabel = $years->contains(null) ? 'ทุกปี' : $years->filter()->unique()->sort()->implode(', ');
+                                            @endphp
                                             <span class="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
                                                 {{ $lvl->name }}
+                                                @if ($lvl->isYearScoped())<span class="ml-1 text-[10px] font-normal text-indigo-500">({{ $yearLabel }})</span>@endif
                                             </span>
                                         @endforeach
                                         @if ($u->menu_permissions_count)

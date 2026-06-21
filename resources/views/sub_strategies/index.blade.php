@@ -12,7 +12,7 @@
             </select>
         </form>
 
-        @if ($user->canMenu('kpi.sub_strategy', 'create'))
+        @if ($user->canManageIndicatorData('kpi.sub_strategy', 'create'))
             <x-btn :href="route('sub-strategies.create')"><x-icon name="sub_strategy" class="w-4 h-4" /> เพิ่มกลยุทธ์</x-btn>
         @endif
     </div>
@@ -49,10 +49,10 @@
                             <td class="px-5 py-3 text-center text-slate-600">{{ $ss->indicators_count }}</td>
                             <td class="px-5 py-3">
                                 <div class="flex items-center justify-end gap-1">
-                                    @if ($user->canMenu('kpi.sub_strategy', 'edit'))
+                                    @if ($user->canManageIndicatorData('kpi.sub_strategy', 'edit', $ss->strategy?->level ?? '', $ss->strategy?->year))
                                         <x-btn :href="route('sub-strategies.edit', $ss)" variant="ghost">แก้ไข</x-btn>
                                     @endif
-                                    @if ($user->canMenu('kpi.sub_strategy', 'delete'))
+                                    @if ($user->canManageIndicatorData('kpi.sub_strategy', 'delete', $ss->strategy?->level ?? '', $ss->strategy?->year))
                                         <form method="POST" action="{{ route('sub-strategies.destroy', $ss) }}" onsubmit="return confirm('ยืนยันลบกลยุทธ์นี้?')">
                                             @csrf @method('DELETE')
                                             <x-btn type="submit" variant="ghost" class="!text-red-600 hover:!bg-red-50">ลบ</x-btn>

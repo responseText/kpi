@@ -11,7 +11,6 @@ use App\Repositories\Contracts\TargetRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -27,8 +26,13 @@ class ResultController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('menu:kpi.result,view', only: ['index']),
-            new Middleware('menu:kpi.result,edit', only: ['edit', 'update']),
+            // ด่านเข้าเมนู: ผู้รับผิดชอบตัวชี้วัด/ผู้ดูแล/ผู้ได้รับสิทธิ์เมนูโดยตรง
+            // (การบันทึกผลรายตัวชี้วัดยังคุมด้วย authorizeRecord ในเมธอด edit/update)
+            function ($request, $next) {
+                abort_unless((bool) $request->user()?->canAccessResults(), 403);
+
+                return $next($request);
+            },
         ];
     }
 

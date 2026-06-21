@@ -18,32 +18,14 @@
                     <x-btn :href="route('permissions.index')" variant="secondary">กลับ</x-btn>
                 </div>
             @else
-                @php $selectedLevels = collect(old('kpi_level_ids', $user->kpiLevelIds()))->map(fn ($v) => (int) $v); @endphp
                 <form method="POST" action="{{ route('permissions.update', $user) }}">
                     @csrf
                     @method('PUT')
 
-                    {{-- บทบาท/ระดับสิทธิ์ (เลือกได้หลายบทบาท) --}}
+                    {{-- บทบาท/ระดับสิทธิ์ (เลือกได้หลายบทบาท) + ปีที่รับผิดชอบ --}}
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-slate-700 mb-2">บทบาทในระบบ KPI (เลือกได้มากกว่า 1)</label>
-                        <div class="space-y-2">
-                            @foreach ($levels as $level)
-                                <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
-                                    <input type="checkbox" name="kpi_level_ids[]" value="{{ $level->id }}"
-                                        @checked($selectedLevels->contains($level->id))
-                                        class="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                    <span>
-                                        <span class="block text-sm font-medium text-slate-800">{{ $level->name }}</span>
-                                        @if ($level->description)
-                                            <span class="block text-xs text-slate-500">{{ $level->description }}</span>
-                                        @endif
-                                    </span>
-                                </label>
-                            @endforeach
-                        </div>
-                        <p class="mt-2 text-xs text-slate-400">
-                            บทบาทควบคุมขอบเขตการจัดการข้อมูล (เช่น การบันทึกผล) ส่วนสิทธิ์รายเมนูด้านล่างควบคุมการเข้าถึงเมนู — หากไม่เลือกบทบาทใด จะใช้เฉพาะสิทธิ์รายเมนู
-                        </p>
+                        @include('permissions._kpi_roles')
                     </div>
 
                     {{-- สิทธิ์รายเมนู --}}

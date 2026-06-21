@@ -14,10 +14,15 @@ class KpiLevel extends Model
 
     /** รหัสบทบาท */
     public const SUPER_ADMIN = 'super_admin';            // ผู้ดูแลระบบสูงสุด
+
     public const ADMIN_ALL = 'indicator_admin_all';      // ผู้ดูแลตัวชี้วัดทั้งหมด (ทุกระดับ)
+
     public const ADMIN_HOSPITAL = 'indicator_admin_hospital';
+
     public const ADMIN_PROVINCE = 'indicator_admin_province';
+
     public const ADMIN_MINISTRY = 'indicator_admin_ministry';
+
     public const OWNER = 'indicator_owner';              // ผู้รับผิดชอบตัวชี้วัด
 
     /** ขอบเขต (scope) */
@@ -26,6 +31,13 @@ class KpiLevel extends Model
     /** บทบาทกลุ่มผู้ดูแลตัวชี้วัด */
     public const INDICATOR_ADMINS = [
         self::ADMIN_ALL,
+        self::ADMIN_HOSPITAL,
+        self::ADMIN_PROVINCE,
+        self::ADMIN_MINISTRY,
+    ];
+
+    /** บทบาทผู้ดูแล "รายระดับ" ที่ผูกกับปี (ไม่รวมผู้ดูแลทั้งหมดซึ่งครอบคลุมทุกระดับ/ทุกปี) */
+    public const LEVEL_ADMINS = [
         self::ADMIN_HOSPITAL,
         self::ADMIN_PROVINCE,
         self::ADMIN_MINISTRY,
@@ -54,5 +66,11 @@ class KpiLevel extends Model
     public function isSuperAdmin(): bool
     {
         return $this->code === self::SUPER_ADMIN;
+    }
+
+    /** เป็นบทบาทผู้ดูแลรายระดับที่ต้องผูกปีรับผิดชอบหรือไม่ */
+    public function isYearScoped(): bool
+    {
+        return in_array($this->code, self::LEVEL_ADMINS, true);
     }
 }

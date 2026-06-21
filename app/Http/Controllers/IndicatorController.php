@@ -60,13 +60,15 @@ class IndicatorController extends Controller implements HasMiddleware
 
     public function create(Request $request): View
     {
+        $this->authorizeManage($request, 'create');
+
         return view('indicators.create', $this->formData($request));
     }
 
     public function store(IndicatorRequest $request): RedirectResponse
     {
-        // สร้างได้เฉพาะตัวชี้วัดในระดับที่ตนดูแล
-        $this->assertCanUseLevel($request, $request->validated()['level']);
+        // ต้องมีสิทธิ์ "เพิ่ม" และอยู่ในระดับ+ปีที่ตนรับผิดชอบ
+        $this->authorizeManage($request, 'create', $request->validated()['level'], (int) $request->validated()['year']);
 
         $indicator = DB::transaction(function () use ($request) {
             $data = $request->validated();
@@ -96,7 +98,7 @@ class IndicatorController extends Controller implements HasMiddleware
 
     public function edit(Request $request, KpiIndicator $indicator): View
     {
-        $this->authorizeLevel($request, $indicator);
+        $this->authorizeManage($request, 'edit', $indicator->level, (int) $indicator->year);
 
         $indicator->load('owners');
 
@@ -105,9 +107,9 @@ class IndicatorController extends Controller implements HasMiddleware
 
     public function update(IndicatorRequest $request, KpiIndicator $indicator): RedirectResponse
     {
-        // ต้องดูแลระดับเดิมของตัวชี้วัด และระดับใหม่ที่ส่งมาด้วย
-        $this->authorizeLevel($request, $indicator);
-        $this->assertCanUseLevel($request, $request->validated()['level']);
+        // ต้องมีสิทธิ์ "แก้ไข" ทั้งระดับ+ปีเดิมของตัวชี้วัด และระดับ+ปีใหม่ที่ส่งมา
+        $this->authorizeManage($request, 'edit', $indicator->level, (int) $indicator->year);
+        $this->authorizeManage($request, 'edit', $request->validated()['level'], (int) $request->validated()['year']);
 
         DB::transaction(function () use ($request, $indicator) {
             $data = $request->validated();
@@ -125,30 +127,34 @@ class IndicatorController extends Controller implements HasMiddleware
 
     public function destroy(Request $request, KpiIndicator $indicator): RedirectResponse
     {
-        $this->authorizeLevel($request, $indicator);
+        // ลบแบบ soft delete (โมเดลใช้ SoftDeletes)
+        $this->authorizeManage($request, 'delete', $indicator->level, (int) $indicator->year);
 
         $this->indicators->delete($indicator);
 
         return redirect()->route('indicators.index')->with('success', 'ลบตัวชี้วัดเรียบร้อยแล้ว');
     }
 
-    /** อนุญาตเฉพาะผู้ดูแลที่ครอบคลุมระดับของตัวชี้วัดนี้ */
+    /** อนุญาตให้ "ดู" ตัวชี้วัดระดับ+ปีนี้ (ตามบทบาทระดับ/ปี ไม่ต้องมีสิทธิ์ action) */
     private function authorizeLevel(Request $request, KpiIndicator $indicator): void
     {
         abort_unless(
-            $request->user()->canManageIndicatorLevel($indicator->level),
+            $request->user()->canManageIndicatorLevel($indicator->level, (int) $indicator->year),
             403,
-            'คุณไม่มีสิทธิ์จัดการตัวชี้วัดระดับนี้ (เฉพาะผู้ดูแลระดับที่เกี่ยวข้องเท่านั้น)'
+            'คุณไม่มีสิทธิ์เข้าถึงตัวชี้วัดระดับ/ปีนี้ (เฉพาะผู้ดูแลที่รับผิดชอบระดับและปีนี้เท่านั้น)'
         );
     }
 
-    /** อนุญาตเฉพาะการสร้าง/บันทึกตัวชี้วัดในระดับที่ผู้ใช้ดูแล */
-    private function assertCanUseLevel(Request $request, string $level): void
+    /**
+     * อนุญาตเฉพาะผู้ที่ได้รับสิทธิ์ action ในเมนูตัวชี้วัด และอยู่ในขอบเขตระดับ+ปีที่ดูแล
+     * (ถ้าไม่มีสิทธิ์ action → ดูได้อย่างเดียว เข้าถึงการเพิ่ม/แก้ไข/ลบไม่ได้)
+     */
+    private function authorizeManage(Request $request, string $action, ?string $level = null, ?int $year = null): void
     {
         abort_unless(
-            $request->user()->canManageIndicatorLevel($level),
+            $request->user()->canManageIndicatorData('kpi.indicator', $action, $level, $year),
             403,
-            'คุณไม่มีสิทธิ์บันทึกตัวชี้วัดในระดับนี้ (เฉพาะผู้ดูแลระดับที่เกี่ยวข้องเท่านั้น)'
+            'คุณไม่มีสิทธิ์ดำเนินการนี้กับตัวชี้วัด (ตรวจสอบสิทธิ์เมนู ระดับ และปีที่รับผิดชอบ)'
         );
     }
 

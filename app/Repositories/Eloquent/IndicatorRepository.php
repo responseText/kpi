@@ -5,6 +5,7 @@ namespace App\Repositories\Eloquent;
 use App\Models\KpiIndicator;
 use App\Models\User;
 use App\Repositories\Contracts\IndicatorRepositoryInterface;
+use App\Support\IndicatorScopeFilter;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,7 @@ class IndicatorRepository extends BaseRepository implements IndicatorRepositoryI
 {
     protected function makeModel(): Model
     {
-        return new KpiIndicator();
+        return new KpiIndicator;
     }
 
     /** คิวรีพื้นฐานพร้อมตัวกรอง (ระดับ/ปี/แบบปี/กลยุทธ์/ค้นหา) — ใช้ร่วมทุกเมธอด paginate */
@@ -48,15 +49,13 @@ class IndicatorRepository extends BaseRepository implements IndicatorRepositoryI
         // จำกัดสิทธิ์การมองเห็น: ผู้ที่บันทึกได้ทุกตัว (super admin / ผู้ดูแลตัวชี้วัดทั้งหมด) ไม่ต้องกรอง
         // ที่เหลือเห็นเฉพาะ "ระดับที่ตนเป็นผู้ดูแล" รวมกับ "ตัวชี้วัดที่ตนเป็นผู้รับผิดชอบ"
         if (! $user->canManageAllIndicatorLevels()) {
-            $adminLevels = $user->manageableIndicatorLevels();
+            $scopeYears = $user->indicatorAdminScopeYears();
             $ownedIds = $user->ownedIndicatorIds();
 
-            $query->where(function ($q) use ($adminLevels, $ownedIds) {
-                // whereIn([]) → ไม่เห็นอะไรเลยเป็นค่าตั้งต้น แล้วเปิดสิทธิ์ตามที่มี
+            $query->where(function ($q) use ($scopeYears, $ownedIds) {
+                // เห็น "ตัวชี้วัดที่ตนรับผิดชอบ" รวมกับ "ระดับ+ปีที่ตนเป็นผู้ดูแล"
                 $q->whereIn('id', $ownedIds);
-                if ($adminLevels) {
-                    $q->orWhereIn('level', $adminLevels);
-                }
+                IndicatorScopeFilter::orWhereScopes($q, $scopeYears);
             });
         }
 
@@ -72,9 +71,13 @@ class IndicatorRepository extends BaseRepository implements IndicatorRepositoryI
         $query = $this->baseFilteredQuery($filters);
 
         // ผู้ดูแลทุกระดับ (super admin / ผู้ดูแลตัวชี้วัดทั้งหมด) เห็นทุกตัว
-        // ผู้ดูแลระดับ → เห็นเฉพาะระดับของตน (whereIn([]) → ไม่เห็นเลย)
+        // ผู้ดูแลรายระดับ → เห็นเฉพาะระดับ+ปีที่ตนรับผิดชอบ
         if (! $user->canManageAllIndicatorLevels()) {
-            $query->whereIn('level', $user->manageableIndicatorLevels());
+            $scopeYears = $user->indicatorAdminScopeYears();
+            $query->where(function ($q) use ($scopeYears) {
+                $q->whereRaw('1 = 0');
+                IndicatorScopeFilter::orWhereScopes($q, $scopeYears);
+            });
         }
 
         return $query

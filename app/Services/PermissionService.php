@@ -52,9 +52,14 @@ class PermissionService
                 if ($m->code === 'kpi.unit') {
                     return $user->canManageUnits();
                 }
-                // ตัวชี้วัด + กำหนดค่าเป้าหมาย: เฉพาะผู้ดูแลตัวชี้วัด (ทุกระดับ/ทั้งหมด/รายระดับ)
-                if ($m->code === 'kpi.indicator' || $m->code === 'kpi.target') {
+                // ยุทธศาสตร์ + กลยุทธ์ + ตัวชี้วัด + กำหนดค่าเป้าหมาย:
+                // เฉพาะผู้ดูแลตัวชี้วัด (ทุกระดับ/ทั้งหมด/รายระดับ) — เนื้อหาถูกสโคปตามระดับอีกชั้นในแต่ละหน้า
+                if (in_array($m->code, ['kpi.strategy', 'kpi.sub_strategy', 'kpi.indicator', 'kpi.target'], true)) {
                     return $user->isIndicatorManager();
+                }
+                // บันทึกผลงาน: ผู้รับผิดชอบตัวชี้วัด/ผู้ดูแล เห็นได้เสมอ (ไม่ต้องรอกำหนดสิทธิ์เมนู)
+                if ($m->code === 'kpi.result') {
+                    return $user->canAccessResults();
                 }
 
                 return $user->hasMenu($m->code);
