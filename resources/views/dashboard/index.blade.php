@@ -16,21 +16,25 @@
     $totAll = $totPass + $totFail + $totPending;
     $passPct = $totAll > 0 ? round($totPass / $totAll * 100) : 0;
 
-    // ----- กราฟเส้นพื้นหลัง hero: แนวโน้มอัตราผ่านรวมย้อนหลังรายปี -----
-    $trend = array_values($passTrend ?? []);
-    if (count($trend) === 1) {
-        $trend = [$trend[0], $trend[0]]; // มีปีเดียว → ลากเป็นเส้นแบน
-    }
-    $heroLinePath = $heroAreaPath = '';
+    // ----- สปาร์กไลน์แนวโน้มอัตราผ่านรวมย้อนหลังรายปี (แสดงใต้ตัวเลขอัตราผ่านรวม) -----
+    $trendRaw = array_values($passTrend ?? []);
+    $trendCount = count($trendRaw);
+    $trendFirstYear = $trendCount ? $trendRaw[0]['year'] : null;
+    $trendLastYear = $trendCount ? $trendRaw[$trendCount - 1]['year'] : null;
+    $trendLastPct = $trendCount ? $trendRaw[$trendCount - 1]['pct'] : null;
+
+    $trend = $trendCount === 1 ? [$trendRaw[0], $trendRaw[0]] : $trendRaw; // ปีเดียว → ลากเป็นเส้นแบน
+    $sparkLine = $sparkArea = '';
+    $sparkDot = null;
     if (count($trend) >= 2) {
-        $vw = 1200; $vh = 300; $padY = 40; // viewBox + เว้นขอบบน/ล่าง
+        $sw = 240; $sh = 64; $top = 10; $bottom = 52; $padX = 8; // viewBox เล็กสำหรับสปาร์กไลน์
         $n = count($trend);
         $pts = [];
-        foreach ($trend as $i => $d) {
+        foreach (array_values($trend) as $i => $d) {
             $pct = max(0, min(100, (int) ($d['pct'] ?? 0)));
             $pts[] = [
-                round($i / ($n - 1) * $vw, 1),
-                round($vh - $padY - $pct / 100 * ($vh - 2 * $padY), 1),
+                round($padX + $i / ($n - 1) * ($sw - 2 * $padX), 1),
+                round($bottom - $pct / 100 * ($bottom - $top), 1),
             ];
         }
         // เชื่อมจุดเป็นเส้นโค้งลื่น (Catmull-Rom → Bézier)
@@ -43,8 +47,9 @@
             $c2y = round($p2[1] - ($p3[1] - $p1[1]) / 6, 1);
             $path .= " C {$c1x} {$c1y}, {$c2x} {$c2y}, {$p2[0]} {$p2[1]}";
         }
-        $heroLinePath = $path;
-        $heroAreaPath = $path . " L {$vw} {$vh} L 0 {$vh} Z";
+        $sparkLine = $path;
+        $sparkArea = $path . " L {$pts[$n - 1][0]} {$sh} L {$pts[0][0]} {$sh} Z";
+        $sparkDot = $pts[$n - 1];
     }
 
     $tabs = [
@@ -61,23 +66,7 @@
         <div class="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
         <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl"></div>
 
-        {{-- กราฟเส้นพื้นหลัง: แนวโน้มอัตราผ่านรวมย้อนหลังรายปี --}}
-        @if ($heroLinePath)
-            <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1200 300"
-                 preserveAspectRatio="none" fill="none" aria-hidden="true">
-                <defs>
-                    <linearGradient id="heroTrendFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.20" />
-                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
-                    </linearGradient>
-                </defs>
-                <path d="{{ $heroAreaPath }}" fill="url(#heroTrendFill)" />
-                <path d="{{ $heroLinePath }}" stroke="#ffffff" stroke-opacity="0.45"
-                      stroke-width="2.5" stroke-linecap="round" vector-effect="non-scaling-stroke" />
-            </svg>
-        @endif
-
-        <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             <div class="min-w-0">
                 <div class="flex items-center gap-2 text-indigo-100">
                     <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
@@ -103,26 +92,56 @@
                 </div>
             </div>
 
-            {{-- อัตราผ่านรวม + ตัวกรองปี --}}
-            <div class="flex shrink-0 items-center gap-6">
-                <div class="text-center">
-                    <div class="text-5xl font-extrabold leading-none">{{ $passPct }}<span class="align-top text-2xl">%</span></div>
-                    <div class="mt-1.5 text-xs font-medium text-indigo-100">อัตราผ่านรวม</div>
-                    <div class="mx-auto mt-2 h-1.5 w-28 overflow-hidden rounded-full bg-white/20">
-                        <div class="h-full rounded-full bg-white transition-all" style="width: {{ $passPct }}%"></div>
+            {{-- อัตราผ่านรวม + กราฟแนวโน้ม + ตัวกรองปี --}}
+            <div class="w-full shrink-0 lg:w-auto">
+                <div class="flex items-end justify-between gap-6 lg:justify-end">
+                    <div class="text-center">
+                        <div class="text-5xl font-extrabold leading-none">{{ $passPct }}<span class="align-top text-2xl">%</span></div>
+                        <div class="mt-1.5 text-xs font-medium text-indigo-100">อัตราผ่านรวม</div>
                     </div>
+                    <form method="GET">
+                        <label class="mb-1 block text-xs font-medium text-indigo-100">ปีงบประมาณ</label>
+                        <select name="year" onchange="this.form.submit()"
+                            class="rounded-xl border-0 bg-white/95 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:ring-2 focus:ring-white/70">
+                            @forelse ($years as $y)
+                                <option value="{{ $y }}" @selected($y == $year)>{{ $y }}</option>
+                            @empty
+                                <option value="{{ $year }}">{{ $year }}</option>
+                            @endforelse
+                        </select>
+                    </form>
                 </div>
-                <form method="GET">
-                    <label class="mb-1 block text-xs font-medium text-indigo-100">ปีงบประมาณ</label>
-                    <select name="year" onchange="this.form.submit()"
-                        class="rounded-xl border-0 bg-white/95 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:ring-2 focus:ring-white/70">
-                        @forelse ($years as $y)
-                            <option value="{{ $y }}" @selected($y == $year)>{{ $y }}</option>
-                        @empty
-                            <option value="{{ $year }}">{{ $year }}</option>
-                        @endforelse
-                    </select>
-                </form>
+
+                {{-- กราฟแนวโน้มอัตราผ่านรวมย้อนหลังรายปี --}}
+                @if ($sparkLine)
+                    <div class="mt-4 rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/15 backdrop-blur lg:w-72">
+                        <div class="mb-1.5 flex items-center justify-between text-[11px] font-medium text-indigo-100">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="h-1.5 w-1.5 rounded-full bg-white"></span> แนวโน้มอัตราผ่านรวมรายปี
+                            </span>
+                            <span class="font-semibold text-white">{{ $trendLastPct }}%</span>
+                        </div>
+                        <svg viewBox="0 0 240 64" class="block h-auto w-full" fill="none" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.32" />
+                                    <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                                </linearGradient>
+                            </defs>
+                            <path d="{{ $sparkArea }}" fill="url(#sparkFill)" />
+                            <path d="{{ $sparkLine }}" stroke="#ffffff" stroke-width="2.5"
+                                  stroke-linecap="round" stroke-linejoin="round" />
+                            @if ($sparkDot)
+                                <circle cx="{{ $sparkDot[0] }}" cy="{{ $sparkDot[1] }}" r="8" fill="#ffffff" fill-opacity="0.25" />
+                                <circle cx="{{ $sparkDot[0] }}" cy="{{ $sparkDot[1] }}" r="4" fill="#ffffff" />
+                            @endif
+                        </svg>
+                        <div class="mt-1.5 flex items-center justify-between text-[10px] font-medium text-indigo-200">
+                            <span>ปี {{ $trendFirstYear }}</span>
+                            @if ($trendLastYear !== $trendFirstYear)<span>ปี {{ $trendLastYear }}</span>@endif
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
 

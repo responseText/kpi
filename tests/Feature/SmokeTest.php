@@ -24,8 +24,9 @@ class SmokeTest extends TestCase
             ->get('/dashboard')
             ->assertOk()
             ->assertSee('แดชบอร์ดตัวชี้วัด')
-            // กราฟเส้นพื้นหลัง hero (แนวโน้มอัตราผ่านรวมย้อนหลังรายปี)
-            ->assertSee('heroTrendFill');
+            // กราฟแนวโน้มอัตราผ่านรวมรายปี (sparkline ใต้ตัวเลขอัตราผ่านรวม)
+            ->assertSee('แนวโน้มอัตราผ่านรวมรายปี')
+            ->assertSee('sparkFill');
     }
 
     public function test_level_dashboard_renders_premium_stat_cards(): void
