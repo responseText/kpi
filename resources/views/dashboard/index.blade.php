@@ -91,7 +91,40 @@
         </div>
     </div>
 
-    {{-- ===================== การ์ดสรุปตามระดับ ===================== --}}
+    {{-- ===================== การ์ดสรุป ===================== --}}
+    @if ($level)
+        {{-- เลือกระดับเดียว: แสดงสถิติเด่น 4 ใบเต็มแถวให้ดูสมบูรณ์เหมือนหน้าทั้งหมด --}}
+        @php
+            $s = $summary[$level];
+            $total = (int) $s['total'];
+            $pass = (int) $s['pass']; $fail = (int) $s['fail']; $pending = (int) $s['pending'];
+            $pct = fn ($n) => $total > 0 ? round($n / $total * 100) : 0;
+            $statCards = [
+                ['label' => 'ตัวชี้วัดทั้งหมด', 'value' => $total,   'icon' => 'indicator', 'grad' => 'from-indigo-500 to-blue-600',   'sub' => 'ระดับ' . $levelName],
+                ['label' => 'ผ่านเกณฑ์',       'value' => $pass,    'icon' => 'result',    'grad' => 'from-emerald-500 to-green-600', 'sub' => $pct($pass) . '% ของทั้งหมด'],
+                ['label' => 'ไม่ผ่านเกณฑ์',     'value' => $fail,    'icon' => 'x_circle',  'grad' => 'from-rose-500 to-red-600',      'sub' => $pct($fail) . '% ของทั้งหมด'],
+                ['label' => 'รอบันทึกผล',      'value' => $pending, 'icon' => 'clock',     'grad' => 'from-slate-400 to-slate-600',   'sub' => $pct($pending) . '% ของทั้งหมด'],
+            ];
+        @endphp
+        <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach ($statCards as $c)
+                <div class="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+                    <div class="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br {{ $c['grad'] }} opacity-10 blur-2xl transition-opacity duration-300 group-hover:opacity-20"></div>
+                    <div class="relative flex items-center justify-between">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br {{ $c['grad'] }} text-white shadow-lg ring-1 ring-white/40">
+                            <x-icon :name="$c['icon']" class="h-6 w-6" />
+                        </span>
+                        <span class="text-xs font-medium text-slate-400">{{ $c['sub'] }}</span>
+                    </div>
+                    <div class="relative mt-4">
+                        <div class="text-4xl font-extrabold tracking-tight text-slate-800">{{ $c['value'] }}</div>
+                        <div class="mt-0.5 text-sm font-medium text-slate-500">{{ $c['label'] }}</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @else
+    {{-- ทุกระดับ: การ์ดสรุปรายระดับ --}}
     <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
         @foreach ($summary as $key => $s)
             @php
@@ -145,6 +178,7 @@
             </div>
         @endforeach
     </div>
+    @endif
 
     {{-- ===================== กราฟภาพรวม ===================== --}}
     <div class="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -206,9 +240,9 @@
                 type: 'bar',
                 data: { labels: JSON.parse(lv.dataset.labels),
                     datasets: [
-                        { label: 'ผ่าน', data: JSON.parse(lv.dataset.pass), backgroundColor: '#10b981', borderRadius: 6 },
-                        { label: 'ไม่ผ่าน', data: JSON.parse(lv.dataset.fail), backgroundColor: '#ef4444', borderRadius: 6 },
-                        { label: 'รอบันทึก', data: JSON.parse(lv.dataset.pending), backgroundColor: '#cbd5e1', borderRadius: 6 },
+                        { label: 'ผ่าน', data: JSON.parse(lv.dataset.pass), backgroundColor: '#10b981', borderRadius: 6, maxBarThickness: 72 },
+                        { label: 'ไม่ผ่าน', data: JSON.parse(lv.dataset.fail), backgroundColor: '#ef4444', borderRadius: 6, maxBarThickness: 72 },
+                        { label: 'รอบันทึก', data: JSON.parse(lv.dataset.pending), backgroundColor: '#cbd5e1', borderRadius: 6, maxBarThickness: 72 },
                     ] },
                 options: { responsive: true, maintainAspectRatio: false,
                     scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } },

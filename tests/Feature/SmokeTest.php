@@ -26,6 +26,17 @@ class SmokeTest extends TestCase
             ->assertSee('แดชบอร์ดตัวชี้วัด');
     }
 
+    public function test_level_dashboard_renders_premium_stat_cards(): void
+    {
+        // หน้าแดชบอร์ดรายระดับ (เลือกระดับเดียว) ต้องแสดงการ์ดสถิติเด่นชุด 4 ใบ
+        $this->actingAs($this->admin())
+            ->get(route('dashboard.hospital'))
+            ->assertOk()
+            ->assertSee('ตัวชี้วัดทั้งหมด')
+            ->assertSee('ผ่านเกณฑ์')
+            ->assertSee('รอบันทึกผล');
+    }
+
     public function test_monitor_renders(): void
     {
         $this->actingAs($this->admin())
