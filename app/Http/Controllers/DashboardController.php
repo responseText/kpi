@@ -24,10 +24,13 @@ class DashboardController extends Controller
         // กรองการ์ดสรุป/กราฟให้เหลือเฉพาะระดับที่เลือก (ถ้าเลือก)
         $summary = $level ? [$level => $summaryAll[$level]] : $summaryAll;
 
+        // แจกแจงผ่าน/ไม่ผ่าน ตามยุทธศาสตร์และกลยุทธ์ ในแต่ละระดับ
+        $breakdown = $this->dashboard->breakdownByLevel(array_filter(['year' => $year, 'level' => $level]));
+
         $indicators = $this->dashboard->indicators(array_filter(['year' => $year, 'level' => $level]));
         $statuses = $indicators->mapWithKeys(fn ($i) => [$i->id => $this->dashboard->overallStatus($i)]);
 
-        return view('dashboard.index', compact('years', 'year', 'level', 'summary', 'indicators', 'statuses'));
+        return view('dashboard.index', compact('years', 'year', 'level', 'summary', 'breakdown', 'indicators', 'statuses'));
     }
 
     public function monitor(Request $request): View

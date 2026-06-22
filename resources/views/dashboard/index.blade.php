@@ -121,6 +121,129 @@
     </script>
     @endif
 
+    {{-- กราฟแจกแจงผ่าน/ไม่ผ่าน/รอ รายยุทธศาสตร์และกลยุทธ์ (stacked bar แนวนอน) --}}
+    <script>
+        window.addEventListener('load', () => {
+            if (!window.Chart) return;
+            document.querySelectorAll('.kpi-breakdown-chart').forEach((cv) => {
+                new Chart(cv, {
+                    type: 'bar',
+                    data: { labels: JSON.parse(cv.dataset.labels),
+                        datasets: [
+                            { label: 'ผ่าน', data: JSON.parse(cv.dataset.pass), backgroundColor: '#10b981' },
+                            { label: 'ไม่ผ่าน', data: JSON.parse(cv.dataset.fail), backgroundColor: '#ef4444' },
+                            { label: 'รอบันทึก', data: JSON.parse(cv.dataset.pending), backgroundColor: '#94a3b8' },
+                        ] },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } },
+                        plugins: { legend: { position: 'bottom' } } }
+                });
+            });
+        });
+    </script>
+
+    {{-- แจกแจงผ่าน/ไม่ผ่าน ตามยุทธศาสตร์และกลยุทธ์ ในแต่ละระดับ --}}
+    @foreach ($summary as $lvlKey => $s)
+        @php
+            $strategies = $breakdown[$lvlKey]['strategies'] ?? [];
+            $subStrategies = $breakdown[$lvlKey]['subStrategies'] ?? [];
+        @endphp
+        <div class="mt-6">
+            <h3 class="mb-3 text-sm font-semibold text-slate-700">
+                แจกแจงตามยุทธศาสตร์/กลยุทธ์ · {{ KpiIndicator::LEVELS[$lvlKey] ?? $lvlKey }}
+            </h3>
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {{-- ยุทธศาสตร์ --}}
+                <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h4 class="font-semibold text-slate-700">ยุทธศาสตร์</h4>
+                        <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-sm font-medium text-indigo-700">{{ count($strategies) }} ยุทธศาสตร์</span>
+                    </div>
+                    @if (count($strategies) > 0)
+                        <div class="mb-4" style="height: {{ max(120, count($strategies) * 42) }}px;">
+                            <canvas class="kpi-breakdown-chart"
+                                data-labels="{{ json_encode(array_values(array_map(fn ($r) => $r['name'], $strategies)), JSON_UNESCAPED_UNICODE) }}"
+                                data-pass="{{ json_encode(array_values(array_map(fn ($r) => $r['pass'], $strategies))) }}"
+                                data-fail="{{ json_encode(array_values(array_map(fn ($r) => $r['fail'], $strategies))) }}"
+                                data-pending="{{ json_encode(array_values(array_map(fn ($r) => $r['pending'], $strategies))) }}"></canvas>
+                        </div>
+                    @endif
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th class="py-2 pr-3">ยุทธศาสตร์</th>
+                                    <th class="px-2 py-2 text-center">ผ่าน</th>
+                                    <th class="px-2 py-2 text-center">ไม่ผ่าน</th>
+                                    <th class="px-2 py-2 text-center">รอ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @forelse ($strategies as $st)
+                                    <tr>
+                                        <td class="py-2 pr-3">
+                                            <div class="font-medium text-slate-800">{{ $st['name'] }}</div>
+                                            @if (!empty($st['code']))<div class="text-xs text-slate-400">{{ $st['code'] }}</div>@endif
+                                        </td>
+                                        <td class="px-2 py-2 text-center font-semibold text-emerald-600">{{ $st['pass'] }}</td>
+                                        <td class="px-2 py-2 text-center font-semibold text-red-600">{{ $st['fail'] }}</td>
+                                        <td class="px-2 py-2 text-center font-semibold text-slate-400">{{ $st['pending'] }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="py-6 text-center text-slate-400">ยังไม่มีข้อมูล</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {{-- กลยุทธ์ --}}
+                <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h4 class="font-semibold text-slate-700">กลยุทธ์</h4>
+                        <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-sm font-medium text-indigo-700">{{ count($subStrategies) }} กลยุทธ์</span>
+                    </div>
+                    @if (count($subStrategies) > 0)
+                        <div class="mb-4" style="height: {{ max(120, count($subStrategies) * 42) }}px;">
+                            <canvas class="kpi-breakdown-chart"
+                                data-labels="{{ json_encode(array_values(array_map(fn ($r) => $r['name'], $subStrategies)), JSON_UNESCAPED_UNICODE) }}"
+                                data-pass="{{ json_encode(array_values(array_map(fn ($r) => $r['pass'], $subStrategies))) }}"
+                                data-fail="{{ json_encode(array_values(array_map(fn ($r) => $r['fail'], $subStrategies))) }}"
+                                data-pending="{{ json_encode(array_values(array_map(fn ($r) => $r['pending'], $subStrategies))) }}"></canvas>
+                        </div>
+                    @endif
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-left text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th class="py-2 pr-3">กลยุทธ์</th>
+                                    <th class="px-2 py-2 text-center">ผ่าน</th>
+                                    <th class="px-2 py-2 text-center">ไม่ผ่าน</th>
+                                    <th class="px-2 py-2 text-center">รอ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @forelse ($subStrategies as $sub)
+                                    <tr>
+                                        <td class="py-2 pr-3">
+                                            <div class="font-medium text-slate-800">{{ $sub['name'] }}</div>
+                                            @if (!empty($sub['strategy']))<div class="text-xs text-slate-400">{{ $sub['strategy'] }}</div>@endif
+                                        </td>
+                                        <td class="px-2 py-2 text-center font-semibold text-emerald-600">{{ $sub['pass'] }}</td>
+                                        <td class="px-2 py-2 text-center font-semibold text-red-600">{{ $sub['fail'] }}</td>
+                                        <td class="px-2 py-2 text-center font-semibold text-slate-400">{{ $sub['pending'] }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="py-6 text-center text-slate-400">ยังไม่มีข้อมูล</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endforeach
+
     {{-- ตารางตัวชี้วัด --}}
     <div class="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
         <div class="border-b border-slate-200 px-5 py-3">

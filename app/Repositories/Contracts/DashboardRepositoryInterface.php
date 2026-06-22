@@ -25,4 +25,11 @@ interface DashboardRepositoryInterface
      * @return array<string, array{total:int,pass:int,fail:int,pending:int}>
      */
     public function summaryByLevel(array $filters): array;
+
+    /**
+     * แจกแจงผ่าน/ไม่ผ่าน/รอบันทึก ของตัวชี้วัด แยกตามยุทธศาสตร์และกลยุทธ์ ในแต่ละระดับ
+     * @param  array{year?:int,level?:string}  $filters
+     * @return array<string, array{strategies:array<int,array{name:string,code:?string,total:int,pass:int,fail:int,pending:int}>, subStrategies:array<int,array{name:string,code:?string,strategy:?string,total:int,pass:int,fail:int,pending:int}>}>
+     */
+    public function breakdownByLevel(array $filters): array;
 }

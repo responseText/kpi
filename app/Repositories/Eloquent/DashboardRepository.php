@@ -47,6 +47,47 @@ class DashboardRepository implements DashboardRepositoryInterface
         return $summary;
     }
 
+    public function breakdownByLevel(array $filters): array
+    {
+        $indicators = $this->indicators($filters);
+
+        $result = [
+            KpiIndicator::LEVEL_HOSPITAL => ['strategies' => [], 'subStrategies' => []],
+            KpiIndicator::LEVEL_PROVINCE => ['strategies' => [], 'subStrategies' => []],
+            KpiIndicator::LEVEL_MINISTRY => ['strategies' => [], 'subStrategies' => []],
+        ];
+
+        foreach ($indicators as $ind) {
+            if (! isset($result[$ind->level])) {
+                continue;
+            }
+
+            $status = $this->overallStatus($ind);   // pass | fail | pending
+            $sub = $ind->subStrategy;
+            $strategy = $sub?->strategy;
+
+            // นับตามยุทธศาสตร์ (ผ่าน/ไม่ผ่าน/รอ ของตัวชี้วัดภายใต้ยุทธศาสตร์นั้น)
+            if ($strategy) {
+                $bucket = &$result[$ind->level]['strategies'][$strategy->id];
+                $bucket ??= ['name' => $strategy->name, 'code' => $strategy->code, 'total' => 0, 'pass' => 0, 'fail' => 0, 'pending' => 0];
+                $bucket['total']++;
+                $bucket[$status]++;
+                unset($bucket);
+            }
+
+            // นับตามกลยุทธ์
+            if ($sub) {
+                $bucket = &$result[$ind->level]['subStrategies'][$sub->id];
+                $bucket ??= ['name' => $sub->name, 'code' => $sub->code, 'strategy' => $strategy?->name, 'total' => 0, 'pass' => 0, 'fail' => 0, 'pending' => 0];
+                $bucket['total']++;
+                $bucket[$status]++;
+                unset($bucket);
+            }
+        }
+
+        return $result;
+    }
+
     /**
      * สถานะรวมของตัวชี้วัดหนึ่ง ๆ:
      * - fail   ถ้ามีช่วงใดไม่ผ่าน
