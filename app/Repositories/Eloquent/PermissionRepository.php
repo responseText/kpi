@@ -20,6 +20,7 @@ class PermissionRepository implements PermissionRepositoryInterface
         return User::query()
             ->with(['employee', 'kpiLevelRows.level'])
             ->withCount('menuPermissions')
+            ->where('status', 'enable')
             ->when($search, fn ($q, $v) => $q->where('name', 'like', "%{$v}%"))
             ->orderBy('name')
             ->paginate($perPage)
