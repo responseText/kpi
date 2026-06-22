@@ -37,6 +37,21 @@ class KpiTarget extends Model
         return $this->hasOne(KpiResult::class, 'target_id');
     }
 
+    /**
+     * ช่วงนี้ถูกกำหนดค่าเป้าหมายแล้วหรือยัง
+     * - แบบผ่าน/ไม่ผ่าน (passfail): ถือว่ากำหนดแล้วเมื่อ operator = passfail
+     * - แบบตัวเลข: ต้องมี target_value
+     */
+    public function isDefined(): bool
+    {
+        return $this->operator === 'passfail' || $this->target_value !== null;
+    }
+
+    public function getIsDefinedAttribute(): bool
+    {
+        return $this->isDefined();
+    }
+
     public function getOperatorSymbolAttribute(): string
     {
         return KpiEvaluator::SYMBOLS[$this->operator] ?? $this->operator;

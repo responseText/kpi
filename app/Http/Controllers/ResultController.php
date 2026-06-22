@@ -81,6 +81,11 @@ class ResultController extends Controller implements HasMiddleware
                     continue;
                 }
 
+                // ห้ามบันทึกผลของช่วงที่ยังไม่ได้กำหนดค่าเป้าหมาย (กันการ submit ข้าม UI)
+                if (! $target->isDefined()) {
+                    continue;
+                }
+
                 $numerator = $usesAb ? ($row['numerator_value'] ?? null) : null;
                 $denominator = $usesAb ? ($row['denominator_value'] ?? null) : null;
                 $text = $row['result_text'] ?? null;

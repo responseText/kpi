@@ -3,8 +3,9 @@
 <x-layouts.app title="กำหนดค่าเป้าหมาย" header="กำหนดค่าเป้าหมาย">
     <form method="GET" class="mb-5 flex flex-wrap items-end gap-2">
         <div>
-            <label class="block text-xs text-slate-500">ระดับ</label>
-            <select name="level" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm">
+            <label class="mb-1 block text-sm font-medium text-slate-700">ระดับ</label>
+            <select name="level" onchange="this.form.submit()"
+                class="rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="">ทุกระดับ</option>
                 @foreach (KpiIndicator::LEVELS as $k => $v)
                     <option value="{{ $k }}" @selected(($filters['level'] ?? '') === $k)>{{ $v }}</option>
@@ -12,8 +13,9 @@
             </select>
         </div>
         <div>
-            <label class="block text-xs text-slate-500">ปี</label>
-            <select name="year" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm">
+            <label class="mb-1 block text-sm font-medium text-slate-700">ปี</label>
+            <select name="year" onchange="this.form.submit()"
+                class="rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 <option value="">ทุกปี</option>
                 @foreach ($years as $y)
                     <option value="{{ $y }}" @selected(($filters['year'] ?? '') == $y)>{{ $y }}</option>
@@ -21,8 +23,9 @@
             </select>
         </div>
         <div>
-            <label class="block text-xs text-slate-500">ค้นหา</label>
-            <input name="search" value="{{ $filters['search'] ?? '' }}" placeholder="ชื่อ/รหัส" class="rounded-lg border-slate-300 text-sm shadow-sm">
+            <label class="mb-1 block text-sm font-medium text-slate-700">ค้นหา</label>
+            <input name="search" value="{{ $filters['search'] ?? '' }}" placeholder="ชื่อ/รหัส"
+                class="rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
         </div>
         <x-btn type="submit" variant="secondary">ค้นหา</x-btn>
     </form>
@@ -41,15 +44,27 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($indicators as $ind)
-                        @php $setCount = $ind->targets->whereNotNull('target_value')->count() + $ind->targets->where('operator','passfail')->count(); @endphp
+                        @php
+                            $total = $ind->targets->count();
+                            $defined = $ind->definedTargetsCount();
+                            $noTarget = $defined === 0;
+                        @endphp
                         <tr class="hover:bg-slate-50">
                             <td class="px-5 py-3">
-                                <div class="font-medium text-slate-800">{{ $ind->name }}</div>
+                                <div class="flex items-center gap-2">
+                                    <div class="font-medium text-slate-800">{{ $ind->name }}</div>
+                                    @if ($noTarget)
+                                        <span title="ตัวชี้วัดนี้ยังไม่ได้กำหนดค่าเป้าหมาย"
+                                            class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> ยังไม่ได้กำหนดค่าเป้าหมาย
+                                        </span>
+                                    @endif
+                                </div>
                                 <div class="text-xs text-slate-400">{{ $ind->subStrategy?->strategy?->name }}</div>
                             </td>
                             <td class="px-5 py-3 text-slate-600">{{ $ind->level_label }}</td>
                             <td class="px-5 py-3 text-slate-600">{{ $ind->period_type === 'quarterly' ? 'รายไตรมาส' : 'รายปี' }}</td>
-                            <td class="px-5 py-3 text-center text-slate-600">{{ $ind->targets->count() }} ช่วง</td>
+                            <td class="px-5 py-3 text-center {{ $defined < $total ? 'font-medium text-amber-600' : 'text-slate-600' }}">{{ $defined }}/{{ $total }} ช่วง</td>
                             <td class="px-5 py-3 text-right">
                                 @if ($user->canManageIndicatorData('kpi.target', 'edit', $ind->level, $ind->year))
                                     <x-btn :href="route('targets.edit', $ind)" variant="ghost"><x-icon name="target" class="w-4 h-4" /> กำหนดเป้าหมาย</x-btn>

@@ -5,14 +5,21 @@
 <x-layouts.app title="บันทึกผลงาน" header="บันทึกผลงาน">
     <div class="max-w-4xl">
         <x-card :title="$indicator->name" :subtitle="$indicator->level_label . ' · ' . $indicator->year_type_label . ' ' . $indicator->year">
+            @if ($indicator->hasNoTargetDefined())
+                <div class="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-500"></span>
+                    <span>ตัวชี้วัดนี้<strong>ยังไม่ได้กำหนดค่าเป้าหมาย</strong> จึงยังไม่สามารถบันทึกผลงานได้ — กรุณาให้ผู้ดูแลกำหนดค่าเป้าหมายที่เมนู “กำหนดค่าเป้าหมาย” ก่อน</span>
+                </div>
+            @endif
+
             <form method="POST" action="{{ route('results.update', $indicator) }}">
                 @csrf
                 @method('PUT')
 
                 <div class="space-y-4">
                     @foreach ($indicator->targets as $t)
-                        @php $r = $t->result; @endphp
-                        <div class="rounded-xl border border-slate-200 p-4">
+                        @php $r = $t->result; $defined = $t->isDefined(); @endphp
+                        <div class="rounded-xl border p-4 {{ $defined ? 'border-slate-200' : 'border-amber-200 bg-amber-50/40' }}">
                             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <div>
                                     <h4 class="font-semibold text-slate-700">{{ $t->period_label }}</h4>
@@ -25,7 +32,12 @@
                                 </div>
                             </div>
 
-                            @if ($t->operator === 'passfail')
+                            @if (! $defined)
+                                <div class="flex items-center gap-2 rounded-lg bg-amber-100/70 px-3 py-2 text-xs font-medium text-amber-700">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                    ยังไม่ได้กำหนดค่าเป้าหมายสำหรับช่วงนี้ — ยังบันทึกผลงานไม่ได้
+                                </div>
+                            @elseif ($t->operator === 'passfail')
                                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                     <x-form.select :name="'results[' . $t->id . '][result_text]'" label="ผลการประเมิน">
                                         <option value="">— ยังไม่บันทึก —</option>
@@ -73,8 +85,10 @@
                 </div>
 
                 <div class="mt-6 flex items-center gap-2">
-                    <x-btn type="submit" variant="success">บันทึกผลงาน</x-btn>
-                    <x-btn :href="route('indicators.show', $indicator)" variant="secondary">ยกเลิก</x-btn>
+                    @unless ($indicator->hasNoTargetDefined())
+                        <x-btn type="submit" variant="success">บันทึกผลงาน</x-btn>
+                    @endunless
+                    <x-btn :href="route('indicators.show', $indicator)" variant="secondary">{{ $indicator->hasNoTargetDefined() ? 'กลับ' : 'ยกเลิก' }}</x-btn>
                 </div>
             </form>
         </x-card>

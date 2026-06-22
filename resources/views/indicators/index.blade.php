@@ -3,9 +3,10 @@
 <x-layouts.app title="ตัวชี้วัด" header="ตัวชี้วัด">
     <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
         <form method="GET" class="flex flex-wrap items-end gap-2">
+
             <div>
-                <label class="block text-xs text-slate-500">ระดับ</label>
-                <select name="level" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm">
+                <label class="mb-1 block text-sm font-medium text-slate-700">ระดับ</label>
+                <select name="level" onchange="this.form.submit()" class="w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:max-w-xs">
                     <option value="">ทุกระดับ</option>
                     @foreach (KpiIndicator::LEVELS as $k => $v)
                         <option value="{{ $k }}" @selected(($filters['level'] ?? '') === $k)>{{ $v }}</option>
@@ -13,8 +14,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-slate-500">ปี</label>
-                <select name="year" onchange="this.form.submit()" class="rounded-lg border-slate-300 text-sm shadow-sm">
+                <label class="mb-1 block text-sm font-medium text-slate-700">ปี</label>
+                <select name="year" onchange="this.form.submit()" class="w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:max-w-xs">
                     <option value="">ทุกปี</option>
                     @foreach ($years as $y)
                         <option value="{{ $y }}" @selected(($filters['year'] ?? '') == $y)>{{ $y }}</option>
@@ -22,8 +23,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-slate-500">ค้นหา</label>
-                <input name="search" value="{{ $filters['search'] ?? '' }}" placeholder="ชื่อ/รหัส" class="rounded-lg border-slate-300 text-sm shadow-sm">
+                <label class="mb-1 block text-sm font-medium text-slate-700">ค้นหา</label>
+                <input name="search" value="{{ $filters['search'] ?? '' }}" placeholder="ชื่อ/รหัส" class="w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:max-w-xs">
             </div>
             <x-btn type="submit" variant="secondary">ค้นหา</x-btn>
         </form>

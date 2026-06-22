@@ -125,12 +125,34 @@ class ResultMeasurementTest extends TestCase
             'measurement_type' => 'percent', 'unit' => 'ร้อยละ',
             'numerator_label' => 'จำนวนผ่านเกณฑ์ABLBL', 'denominator_label' => 'จำนวนทั้งหมดABLBL',
         ]);
+        // ต้องกำหนดค่าเป้าหมายก่อน ช่องกรอก A/B จึงจะแสดง (ไม่กำหนดเป้า = บันทึกผลไม่ได้)
+        $this->makeTarget($ind, 'gte', 80);
 
         $res = $this->actingAs($this->admin())->get("/results/{$ind->id}/edit");
         $res->assertOk();
         $res->assertSee('จำนวนผ่านเกณฑ์ABLBL');   // ป้ายตัวตั้ง (A)
         $res->assertSee('จำนวนทั้งหมดABLBL');      // ป้ายตัวหาร (B)
         $res->assertSee('ผลคำนวณ');                 // ช่องผลคำนวณอัตโนมัติ
+    }
+
+    public function test_undefined_target_shows_warning_and_blocks_recording(): void
+    {
+        // ตัวชี้วัดที่ยังไม่ได้กำหนดค่าเป้าหมาย (syncPeriods สร้างช่วงให้ แต่ operator/target_value ยังว่าง)
+        $ind = $this->makeIndicator(['measurement_type' => 'count', 'unit' => 'ครั้ง']);
+
+        // หน้าแก้ไขต้องแจ้งเตือนว่ายังไม่ได้กำหนดค่าเป้าหมาย
+        $res = $this->actingAs($this->admin())->get("/results/{$ind->id}/edit");
+        $res->assertOk();
+        $res->assertSee('ยังไม่ได้กำหนดค่าเป้าหมาย');
+        $res->assertSee('จึงยังไม่สามารถบันทึกผลงานได้');
+
+        // แม้ submit ตรงๆ ระบบก็ต้องไม่บันทึกผลของช่วงที่ยังไม่ได้กำหนดเป้า
+        $target = $ind->targets()->firstOrFail();   // ช่วงที่ syncPeriods สร้าง (ยัง isDefined()=false)
+        $this->actingAs($this->admin())->put("/results/{$ind->id}", [
+            'results' => [$target->id => ['result_value' => 12, 'note' => null]],
+        ])->assertRedirect("/indicators/{$ind->id}");
+
+        $this->assertDatabaseMissing('kpi_results', ['target_id' => $target->id]);
     }
 
     public function test_edit_form_trims_trailing_decimal_zeros(): void

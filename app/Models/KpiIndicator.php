@@ -99,6 +99,18 @@ class KpiIndicator extends Model
         return $this->hasMany(KpiResult::class, 'indicator_id');
     }
 
+    /** จำนวนช่วงที่กำหนดค่าเป้าหมายแล้ว (ต้องโหลดความสัมพันธ์ targets มาก่อน) */
+    public function definedTargetsCount(): int
+    {
+        return $this->targets->filter(fn ($t) => $t->isDefined())->count();
+    }
+
+    /** ยังไม่ได้กำหนดค่าเป้าหมายเลยสักช่วง → ห้ามบันทึกผลงาน */
+    public function hasNoTargetDefined(): bool
+    {
+        return $this->definedTargetsCount() === 0;
+    }
+
     public function scopeEnabled($query)
     {
         return $query->where('status', 'enable');

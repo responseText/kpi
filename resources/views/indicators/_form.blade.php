@@ -15,15 +15,16 @@
             <option value="{{ $y }}">{{ $y }}</option>
         @endforeach
     </select>
-    <p class="mt-1 text-xs text-slate-400">เลือกปีเพื่อแสดงเฉพาะกลยุทธ์ (ภายใต้ยุทธศาสตร์) ของปีที่เลือกในช่องด้านล่าง</p>
+    <p class="mt-1 text-xs text-slate-400">เลือกปีและระดับตัวชี้วัดเพื่อแสดงเฉพาะกลยุทธ์ (ภายใต้ยุทธศาสตร์) ที่สัมพันธ์กันในช่องด้านล่าง</p>
 </div>
 
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <x-form.select name="sub_strategy_id" label="กลยุทธ์ (ภายใต้ยุทธศาสตร์)" :required="true">
         <option value="">— เลือกกลยุทธ์ —</option>
         @foreach ($subStrategyOptions as $opt)
-            <option value="{{ $opt->id }}" data-year="{{ $opt->strategy?->year }}" @selected(old('sub_strategy_id', $ind->sub_strategy_id ?? '') == $opt->id)>
-                [{{ $opt->strategy?->year }}] {{ $opt->strategy?->name }} › {{ $opt->name }}
+            <option value="{{ $opt->id }}" data-year="{{ $opt->strategy?->year }}" data-level="{{ $opt->strategy?->level }}"
+                @selected(old('sub_strategy_id', $ind->sub_strategy_id ?? '') == $opt->id)>
+                [{{ $opt->strategy?->year }} · {{ $opt->strategy?->level_label }}] {{ $opt->strategy?->name }} › {{ $opt->name }}
             </option>
         @endforeach
     </x-form.select>
@@ -214,30 +215,34 @@
 @push('scripts')
     <script>
         (function () {
-            const filter = document.getElementById('ind-year-filter');
+            const yearFilter = document.getElementById('ind-year-filter');
+            const levelSel = document.getElementById('level');
             const sel = document.getElementById('sub_strategy_id');
-            if (!filter || !sel) return;
+            if (!yearFilter || !sel) return;
 
-            // แสดงเฉพาะกลยุทธ์ของปีที่เลือก (ค่าว่าง = ทุกปี)
-            function apply() {
-                const year = filter.value;
+            // แสดงเฉพาะกลยุทธ์ที่ตรงทั้งปี (ค่าว่าง = ทุกปี) และระดับตัวชี้วัดที่เลือก
+            function apply(resetIfHidden) {
+                const year = yearFilter.value;
+                const level = levelSel ? levelSel.value : '';
                 let hideSelected = false;
                 Array.from(sel.options).forEach(opt => {
                     if (!opt.value) return; // คงตัวเลือก placeholder ไว้
-                    const match = !year || opt.dataset.year === year;
+                    const match = (!year || opt.dataset.year === year)
+                        && (!level || opt.dataset.level === level);
                     opt.hidden = !match;
                     opt.disabled = !match;
                     if (!match && opt.selected) hideSelected = true;
                 });
-                if (hideSelected) sel.value = ''; // ถ้าตัวที่เลือกถูกซ่อน ให้รีเซ็ต
+                if (resetIfHidden && hideSelected) sel.value = ''; // เปลี่ยนตัวกรองแล้วตัวที่เลือกหลุดเงื่อนไข → รีเซ็ต
             }
 
-            // โหมดแก้ไข/หลัง validation: ตั้งปีให้ตรงกับกลยุทธ์ที่เลือกอยู่
+            // โหมดแก้ไข/หลัง validation: ตั้งปีให้ตรงกับกลยุทธ์ที่เลือกอยู่ แล้วกรองโดยไม่รีเซ็ตตัวที่เลือก
             const current = sel.options[sel.selectedIndex];
-            if (current && current.value && current.dataset.year) filter.value = current.dataset.year;
+            if (current && current.value && current.dataset.year) yearFilter.value = current.dataset.year;
 
-            filter.addEventListener('change', apply);
-            apply();
+            yearFilter.addEventListener('change', () => apply(true));
+            if (levelSel) levelSel.addEventListener('change', () => apply(true));
+            apply(false);
         })();
     </script>
 @endpush

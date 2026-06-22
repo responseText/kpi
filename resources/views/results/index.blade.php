@@ -43,6 +43,7 @@
                         @php
                             $total = $ind->targets->count();
                             $done = $ind->targets->filter(fn ($t) => $t->result && $t->result->pass_status !== 'pending')->count();
+                            $noTarget = $ind->hasNoTargetDefined();
                         @endphp
                         <tr class="hover:bg-slate-50">
                             <td class="px-5 py-3">
@@ -50,10 +51,23 @@
                                 <div class="text-xs text-slate-400">{{ $ind->subStrategy?->strategy?->name }}</div>
                             </td>
                             <td class="px-5 py-3 text-slate-600">{{ $ind->level_label }}</td>
-                            <td class="px-5 py-3 text-center text-slate-600">{{ $done }}/{{ $total }} ช่วง</td>
+                            <td class="px-5 py-3 text-center">
+                                @if ($noTarget)
+                                    <span title="ตัวชี้วัดนี้ยังไม่ได้กำหนดค่าเป้าหมาย"
+                                        class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> ยังไม่ได้กำหนดค่าเป้าหมาย
+                                    </span>
+                                @else
+                                    <span class="text-slate-600">{{ $done }}/{{ $total }} ช่วง</span>
+                                @endif
+                            </td>
                             <td class="px-5 py-3 text-right">
                                 {{-- รายการถูกกรองไว้แล้วให้เหลือเฉพาะตัวชี้วัดที่ผู้ใช้มีสิทธิ์บันทึก --}}
-                                <x-btn :href="route('results.edit', $ind)" variant="ghost"><x-icon name="result" class="w-4 h-4" /> บันทึกผล</x-btn>
+                                @if ($noTarget)
+                                    <span class="text-xs text-slate-400">ต้องกำหนดค่าเป้าหมายก่อน</span>
+                                @else
+                                    <x-btn :href="route('results.edit', $ind)" variant="ghost"><x-icon name="result" class="w-4 h-4" /> บันทึกผล</x-btn>
+                                @endif
                             </td>
                         </tr>
                     @empty
