@@ -62,66 +62,52 @@
 
 <x-layouts.app title="แดชบอร์ด" :header="'แดชบอร์ดตัวชี้วัด · ' . $levelName">
     {{-- ===================== HERO ===================== --}}
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 p-6 text-white shadow-lg sm:p-8">
-        <div class="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
-        <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl"></div>
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 px-5 py-4 text-white shadow-lg sm:px-7 sm:py-5">
+        <div class="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-white/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-24 left-10 h-48 w-48 rounded-full bg-fuchsia-400/20 blur-3xl"></div>
 
-        <div class="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div class="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div class="min-w-0">
                 <div class="flex items-center gap-2 text-indigo-100">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-                        <x-icon name="dashboard" class="h-5 w-5" />
+                    <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 backdrop-blur">
+                        <x-icon name="dashboard" class="h-4 w-4" />
                     </span>
-                    <span class="text-sm font-medium">แดชบอร์ดตัวชี้วัด · {{ $levelName }}</span>
+                    <span class="text-xs font-medium sm:text-sm">แดชบอร์ดตัวชี้วัด · {{ $levelName }}</span>
                 </div>
-                <h2 class="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">ภาพรวมผลการดำเนินงาน ปี {{ $year }}</h2>
+                <h2 class="mt-2 text-xl font-bold tracking-tight sm:text-2xl">ภาพรวมผลการดำเนินงาน ปี {{ $year }}</h2>
 
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur">
-                        <x-icon name="indicator" class="h-4 w-4" /> {{ $totAll }} ตัวชี้วัด
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium backdrop-blur">
+                        <x-icon name="indicator" class="h-3.5 w-3.5" /> {{ $totAll }} ตัวชี้วัด
                     </span>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur">
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium backdrop-blur">
                         <span class="h-2 w-2 rounded-full bg-emerald-300"></span> ผ่าน {{ $totPass }}
                     </span>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur">
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium backdrop-blur">
                         <span class="h-2 w-2 rounded-full bg-rose-300"></span> ไม่ผ่าน {{ $totFail }}
                     </span>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur">
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium backdrop-blur">
                         <span class="h-2 w-2 rounded-full bg-slate-200"></span> รอ {{ $totPending }}
                     </span>
                 </div>
             </div>
 
-            {{-- อัตราผ่านรวม + กราฟแนวโน้ม + ตัวกรองปี --}}
-            <div class="w-full shrink-0 lg:w-auto">
-                <div class="flex items-end justify-between gap-6 lg:justify-end">
-                    <div class="text-center">
-                        <div class="text-5xl font-extrabold leading-none">{{ $passPct }}<span class="align-top text-2xl">%</span></div>
-                        <div class="mt-1.5 text-xs font-medium text-indigo-100">อัตราผ่านรวม</div>
-                    </div>
-                    <form method="GET">
-                        <label class="mb-1 block text-xs font-medium text-indigo-100">ปีงบประมาณ</label>
-                        <select name="year" onchange="this.form.submit()"
-                            class="rounded-xl border-0 bg-white/95 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm focus:ring-2 focus:ring-white/70">
-                            @forelse ($years as $y)
-                                <option value="{{ $y }}" @selected($y == $year)>{{ $y }}</option>
-                            @empty
-                                <option value="{{ $year }}">{{ $year }}</option>
-                            @endforelse
-                        </select>
-                    </form>
+            {{-- ขวา: แผงเมตริก อัตราผ่านรวม + กราฟแนวโน้ม + ตัวกรองปี (แนวนอนกระชับ) --}}
+            <div class="flex w-full items-center gap-3 rounded-2xl bg-white/10 px-4 py-2.5 ring-1 ring-white/15 backdrop-blur sm:gap-5 lg:w-auto">
+                {{-- อัตราผ่านรวม --}}
+                <div class="text-center">
+                    <div class="text-4xl font-extrabold leading-none sm:text-5xl">{{ $passPct }}<span class="align-top text-xl">%</span></div>
+                    <div class="mt-1 text-[11px] font-medium text-indigo-100">อัตราผ่านรวม</div>
                 </div>
 
-                {{-- กราฟแนวโน้มอัตราผ่านรวมย้อนหลังรายปี --}}
+                {{-- กราฟแนวโน้มอัตราผ่านรวมรายปี --}}
                 @if ($sparkLine)
-                    <div class="mt-4 rounded-2xl bg-white/10 p-3.5 ring-1 ring-white/15 backdrop-blur lg:w-72">
-                        <div class="mb-1.5 flex items-center justify-between text-[11px] font-medium text-indigo-100">
-                            <span class="inline-flex items-center gap-1.5">
-                                <span class="h-1.5 w-1.5 rounded-full bg-white"></span> แนวโน้มอัตราผ่านรวมรายปี
-                            </span>
+                    <div class="hidden border-l border-white/20 pl-4 sm:block">
+                        <div class="mb-0.5 flex items-center justify-between gap-4 text-[10px] font-medium text-indigo-100">
+                            <span class="inline-flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-white"></span> แนวโน้มรายปี</span>
                             <span class="font-semibold text-white">{{ $trendLastPct }}%</span>
                         </div>
-                        <svg viewBox="0 0 240 64" class="block h-auto w-full" fill="none" aria-hidden="true">
+                        <svg viewBox="0 0 240 64" class="block h-auto w-32" fill="none" aria-hidden="true">
                             <defs>
                                 <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="0%" stop-color="#ffffff" stop-opacity="0.32" />
@@ -132,24 +118,37 @@
                             <path d="{{ $sparkLine }}" stroke="#ffffff" stroke-width="2.5"
                                   stroke-linecap="round" stroke-linejoin="round" />
                             @if ($sparkDot)
-                                <circle cx="{{ $sparkDot[0] }}" cy="{{ $sparkDot[1] }}" r="8" fill="#ffffff" fill-opacity="0.25" />
-                                <circle cx="{{ $sparkDot[0] }}" cy="{{ $sparkDot[1] }}" r="4" fill="#ffffff" />
+                                <circle cx="{{ $sparkDot[0] }}" cy="{{ $sparkDot[1] }}" r="9" fill="#ffffff" fill-opacity="0.25" />
+                                <circle cx="{{ $sparkDot[0] }}" cy="{{ $sparkDot[1] }}" r="5" fill="#ffffff" />
                             @endif
                         </svg>
-                        <div class="mt-1.5 flex items-center justify-between text-[10px] font-medium text-indigo-200">
+                        <div class="mt-0.5 flex items-center justify-between text-[10px] font-medium text-indigo-200">
                             <span>ปี {{ $trendFirstYear }}</span>
                             @if ($trendLastYear !== $trendFirstYear)<span>ปี {{ $trendLastYear }}</span>@endif
                         </div>
                     </div>
                 @endif
+
+                {{-- ตัวกรองปี --}}
+                <form method="GET" class="ml-auto border-l border-white/20 pl-4">
+                    <label class="mb-1 block text-[11px] font-medium text-indigo-100">ปีงบประมาณ</label>
+                    <select name="year" onchange="this.form.submit()"
+                        class="rounded-lg border-0 bg-white/95 px-2.5 py-1.5 text-sm font-semibold text-slate-700 shadow-sm focus:ring-2 focus:ring-white/70">
+                        @forelse ($years as $y)
+                            <option value="{{ $y }}" @selected($y == $year)>{{ $y }}</option>
+                        @empty
+                            <option value="{{ $year }}">{{ $year }}</option>
+                        @endforelse
+                    </select>
+                </form>
             </div>
         </div>
 
         {{-- แท็บเลือกระดับ --}}
-        <div class="relative mt-6 flex flex-wrap gap-1.5">
+        <div class="relative mt-4 flex flex-wrap gap-1.5">
             @foreach ($tabs as $t)
                 <a href="{{ route($t['route'], ['year' => $year]) }}"
-                   class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-sm font-medium transition
+                   class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition
                           {{ $t['on'] ? 'bg-white text-indigo-700 shadow-sm' : 'bg-white/10 text-white hover:bg-white/20' }}">
                     <x-icon :name="$t['icon']" class="h-4 w-4" /> {{ $t['label'] }}
                 </a>
