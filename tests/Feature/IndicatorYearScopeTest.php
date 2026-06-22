@@ -141,4 +141,15 @@ class IndicatorYearScopeTest extends TestCase
         $this->assertDatabaseHas('users_on_level', ['user_id' => $plain->id, 'level_id' => $hospitalLevelId, 'year' => null]);
         $this->assertDatabaseMissing('users_on_level', ['user_id' => $plain->id, 'level_id' => $hospitalLevelId, 'year' => 2569]);
     }
+
+    public function test_permission_edit_page_shows_year_dropdown(): void
+    {
+        $plain = User::whereNotIn('id', [1, 2])->orderBy('id')->firstOrFail();
+
+        $res = $this->actingAs($this->admin())->get("/permissions/{$plain->id}/edit");
+        $res->assertOk();
+        $res->assertSee('ปีที่รับผิดชอบ');
+        $res->assertSee('name="kpi_level_years', false);   // เป็น dropdown <select>
+        $res->assertSee('ทุกปี');
+    }
 }

@@ -12,9 +12,10 @@
     @foreach ($levels as $level)
         @php
             $isChecked = $selectedLevels->contains($level->id);
-            $currentYears = $oldYears !== null ? ($oldYears[$level->id] ?? []) : ($yearMap[$level->id] ?? []);
-            $allYears = collect($currentYears)->contains(fn ($v) => $v === null || $v === 'all');
-            $selectedYearInts = collect($currentYears)->filter(fn ($v) => is_numeric($v))->map(fn ($v) => (int) $v);
+            $currentYears = collect($oldYears !== null ? ($oldYears[$level->id] ?? []) : ($yearMap[$level->id] ?? []));
+            // ค่าที่เลือกใน dropdown: ปีตัวเลขแรกที่พบ ไม่งั้นถือเป็น "ทุกปี"
+            $firstYear = $currentYears->first(fn ($v) => is_numeric($v));
+            $selectedYear = $firstYear !== null ? (string) $firstYear : 'all';
         @endphp
         <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3 hover:bg-slate-50">
             <input type="checkbox" name="kpi_level_ids[]" value="{{ $level->id }}"
@@ -27,23 +28,16 @@
                 @endif
 
                 @if ($level->isYearScoped())
-                    {{-- ปีที่รับผิดชอบ — มีผลทั้งการดูและจัดการข้อมูลของระดับนี้ตามปีที่เลือก --}}
-                    <span class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                    {{-- ปีที่รับผิดชอบ — เลือกจาก dropdown; มีผลทั้งการดูและจัดการข้อมูลของระดับนี้ตามปีที่เลือก --}}
+                    <span class="mt-2 flex flex-wrap items-center gap-2">
                         <span class="text-xs font-medium text-slate-500">ปีที่รับผิดชอบ:</span>
-                        <label class="inline-flex items-center gap-1 text-xs text-slate-600">
-                            <input type="checkbox" name="kpi_level_years[{{ $level->id }}][]" value="all"
-                                @checked($allYears)
-                                class="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                            ทุกปี
-                        </label>
-                        @foreach ($years as $y)
-                            <label class="inline-flex items-center gap-1 text-xs text-slate-600">
-                                <input type="checkbox" name="kpi_level_years[{{ $level->id }}][]" value="{{ $y }}"
-                                    @checked($selectedYearInts->contains((int) $y))
-                                    class="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                {{ $y }}
-                            </label>
-                        @endforeach
+                        <select name="kpi_level_years[{{ $level->id }}][]" onclick="event.stopPropagation()"
+                            class="rounded-lg border-slate-300 py-1 pr-8 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="all" @selected($selectedYear === 'all')>ทุกปี</option>
+                            @foreach ($years as $y)
+                                <option value="{{ $y }}" @selected($selectedYear === (string) $y)>{{ $y }}</option>
+                            @endforeach
+                        </select>
                     </span>
                 @endif
             </span>

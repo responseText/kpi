@@ -21,8 +21,8 @@
         @endforeach
     </div>
 
-    {{-- ตัวกรองปี + ลิงก์ Monitor --}}
-    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+    {{-- ตัวกรองปี --}}
+    <div class="mb-5 flex items-center gap-2">
         <form method="GET" class="flex items-center gap-2">
             <label class="text-sm text-slate-600">ปี</label>
             <select name="year" onchange="this.form.submit()"
@@ -34,11 +34,6 @@
                 @endforelse
             </select>
         </form>
-
-        <a href="{{ route('monitor', array_filter(['year' => $year, 'level' => $level])) }}" target="_blank"
-           class="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900">
-            <x-icon name="dashboard" class="w-4 h-4" /> เปิดโหมด Monitor (ทีวี)
-        </a>
     </div>
 
     {{-- การ์ดสรุปตามระดับ --}}
