@@ -88,6 +88,36 @@ class DashboardRepository implements DashboardRepositoryInterface
         return $result;
     }
 
+    public function passRateTrend(?string $level = null): array
+    {
+        // ดึงตัวชี้วัดทุกปีในครั้งเดียว (กรองระดับถ้าระบุ) แล้วจัดกลุ่มตามปีใน PHP
+        $indicators = $this->indicators(array_filter(['level' => $level]));
+
+        $byYear = [];
+        foreach ($indicators as $ind) {
+            $year = (int) $ind->year;
+            $byYear[$year] ??= ['total' => 0, 'pass' => 0];
+            $byYear[$year]['total']++;
+            if ($this->overallStatus($ind) === KpiEvaluator::STATUS_PASS) {
+                $byYear[$year]['pass']++;
+            }
+        }
+
+        ksort($byYear); // เรียงปีจากน้อยไปมาก
+
+        $trend = [];
+        foreach ($byYear as $year => $c) {
+            $trend[] = [
+                'year' => $year,
+                'pct' => $c['total'] > 0 ? (int) round($c['pass'] / $c['total'] * 100) : 0,
+                'total' => $c['total'],
+                'pass' => $c['pass'],
+            ];
+        }
+
+        return $trend;
+    }
+
     /**
      * สถานะรวมของตัวชี้วัดหนึ่ง ๆ:
      * - fail   ถ้ามีช่วงใดไม่ผ่าน

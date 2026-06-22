@@ -16,6 +16,37 @@
     $totAll = $totPass + $totFail + $totPending;
     $passPct = $totAll > 0 ? round($totPass / $totAll * 100) : 0;
 
+    // ----- กราฟเส้นพื้นหลัง hero: แนวโน้มอัตราผ่านรวมย้อนหลังรายปี -----
+    $trend = array_values($passTrend ?? []);
+    if (count($trend) === 1) {
+        $trend = [$trend[0], $trend[0]]; // มีปีเดียว → ลากเป็นเส้นแบน
+    }
+    $heroLinePath = $heroAreaPath = '';
+    if (count($trend) >= 2) {
+        $vw = 1200; $vh = 300; $padY = 40; // viewBox + เว้นขอบบน/ล่าง
+        $n = count($trend);
+        $pts = [];
+        foreach ($trend as $i => $d) {
+            $pct = max(0, min(100, (int) ($d['pct'] ?? 0)));
+            $pts[] = [
+                round($i / ($n - 1) * $vw, 1),
+                round($vh - $padY - $pct / 100 * ($vh - 2 * $padY), 1),
+            ];
+        }
+        // เชื่อมจุดเป็นเส้นโค้งลื่น (Catmull-Rom → Bézier)
+        $path = 'M ' . $pts[0][0] . ' ' . $pts[0][1];
+        for ($i = 0; $i < $n - 1; $i++) {
+            [$p0, $p1, $p2, $p3] = [$pts[$i - 1] ?? $pts[$i], $pts[$i], $pts[$i + 1], $pts[$i + 2] ?? $pts[$i + 1]];
+            $c1x = round($p1[0] + ($p2[0] - $p0[0]) / 6, 1);
+            $c1y = round($p1[1] + ($p2[1] - $p0[1]) / 6, 1);
+            $c2x = round($p2[0] - ($p3[0] - $p1[0]) / 6, 1);
+            $c2y = round($p2[1] - ($p3[1] - $p1[1]) / 6, 1);
+            $path .= " C {$c1x} {$c1y}, {$c2x} {$c2y}, {$p2[0]} {$p2[1]}";
+        }
+        $heroLinePath = $path;
+        $heroAreaPath = $path . " L {$vw} {$vh} L 0 {$vh} Z";
+    }
+
     $tabs = [
         ['label' => 'ทั้งหมด',   'route' => 'dashboard',          'icon' => 'dashboard', 'on' => $level === null],
         ['label' => 'กระทรวง',   'route' => 'dashboard.ministry', 'icon' => 'ministry',  'on' => $level === 'ministry'],
@@ -29,6 +60,22 @@
     <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-600 to-violet-700 p-6 text-white shadow-lg sm:p-8">
         <div class="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
         <div class="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl"></div>
+
+        {{-- กราฟเส้นพื้นหลัง: แนวโน้มอัตราผ่านรวมย้อนหลังรายปี --}}
+        @if ($heroLinePath)
+            <svg class="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1200 300"
+                 preserveAspectRatio="none" fill="none" aria-hidden="true">
+                <defs>
+                    <linearGradient id="heroTrendFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.20" />
+                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
+                <path d="{{ $heroAreaPath }}" fill="url(#heroTrendFill)" />
+                <path d="{{ $heroLinePath }}" stroke="#ffffff" stroke-opacity="0.45"
+                      stroke-width="2.5" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+            </svg>
+        @endif
 
         <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div class="min-w-0">
