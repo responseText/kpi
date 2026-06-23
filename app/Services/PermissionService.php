@@ -19,10 +19,11 @@ class PermissionService
 
     /**
      * เมนูสำหรับแถบนำทาง (เฉพาะที่ผู้ใช้มี can_view) จัดเป็นโครงสร้าง parent → children
+     * ผู้เยี่ยมชม (ยังไม่ล็อกอิน) จะเห็นเฉพาะเมนูแดชบอร์ด / Monitor ที่เปิดสาธารณะ
      *
      * @return Collection<int, Menu>
      */
-    public function navigationFor(User $user, string $system = 'kpi'): Collection
+    public function navigationFor(?User $user, string $system = 'kpi'): Collection
     {
         $menus = Menu::system($system)->enabled()->orderBy('orderby')->get();
 
@@ -32,9 +33,13 @@ class PermissionService
         return $menus
             ->whereNull('parent_id')
             ->filter(function (Menu $m) use ($user) {
-                // แดชบอร์ด / Monitor: เปิดให้ผู้ใช้ทุกคนเห็นเสมอ (ไม่อิงสิทธิ์รายเมนู)
+                // แดชบอร์ด / Monitor: เปิดสาธารณะ — ทุกคน (รวมผู้ยังไม่ล็อกอิน) เห็นเสมอ
                 if ($m->code === 'kpi.dashboard') {
                     return true;
+                }
+                // ผู้เยี่ยมชม (ยังไม่ล็อกอิน) เห็นได้เฉพาะแดชบอร์ดสาธารณะเท่านั้น
+                if ($user === null) {
+                    return false;
                 }
                 // เมนูพิเศษที่ควบคุมด้วยบทบาท (ไม่อิงสิทธิ์รายเมนู)
                 // เฉพาะผู้ดูแลระบบสูงสุด/ผู้ดูแลตัวชี้วัดทั้งหมดเท่านั้นที่เห็น
@@ -54,7 +59,7 @@ class PermissionService
                 }
                 // ยุทธศาสตร์ + กลยุทธ์ + ตัวชี้วัด + กำหนดค่าเป้าหมาย:
                 // เฉพาะผู้ดูแลตัวชี้วัด (ทุกระดับ/ทั้งหมด/รายระดับ) — เนื้อหาถูกสโคปตามระดับอีกชั้นในแต่ละหน้า
-                if (in_array($m->code, ['kpi.strategy', 'kpi.sub_strategy', 'kpi.indicator', 'kpi.target'], true)) {
+                if (in_array($m->code, ['kpi.strategy', 'kpi.sub_strategy', 'kpi.category', 'kpi.main', 'kpi.indicator', 'kpi.target'], true)) {
                     return $user->isIndicatorManager();
                 }
                 // บันทึกผลงาน: ผู้รับผิดชอบตัวชี้วัด/ผู้ดูแล เห็นได้เสมอ (ไม่ต้องรอกำหนดสิทธิ์เมนู)

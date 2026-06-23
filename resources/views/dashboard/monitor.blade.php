@@ -55,7 +55,7 @@
                                     <h3 class="font-semibold leading-snug text-white 2xl:text-xl">{{ $ind->name }}</h3>
                                     <span class="h-3 w-3 shrink-0 rounded-full {{ $statusBg[$st] }} mt-1"></span>
                                 </div>
-                                <p class="mt-1 text-xs text-slate-400 2xl:text-sm">{{ $ind->subStrategy?->strategy?->name }}</p>
+                                <p class="mt-1 text-xs text-slate-400 2xl:text-sm">{{ $ind->main?->category?->name }}</p>
 
                                 {{-- เป้าหมาย/ผลแต่ละช่วง --}}
                                 <div class="mt-3 flex flex-wrap gap-1.5">

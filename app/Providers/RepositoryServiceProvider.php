@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Contracts\DashboardRepositoryInterface;
 use App\Repositories\Contracts\IndicatorRepositoryInterface;
+use App\Repositories\Contracts\MainRepositoryInterface;
 use App\Repositories\Contracts\LevelManagerRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Repositories\Contracts\ResultRepositoryInterface;
@@ -11,8 +13,10 @@ use App\Repositories\Contracts\StrategyRepositoryInterface;
 use App\Repositories\Contracts\SubStrategyRepositoryInterface;
 use App\Repositories\Contracts\TargetRepositoryInterface;
 use App\Repositories\Contracts\UnitRepositoryInterface;
+use App\Repositories\Eloquent\CategoryRepository;
 use App\Repositories\Eloquent\DashboardRepository;
 use App\Repositories\Eloquent\IndicatorRepository;
+use App\Repositories\Eloquent\MainRepository;
 use App\Repositories\Eloquent\LevelManagerRepository;
 use App\Repositories\Eloquent\PermissionRepository;
 use App\Repositories\Eloquent\ResultRepository;
@@ -28,6 +32,8 @@ class RepositoryServiceProvider extends ServiceProvider
     public array $bindings = [
         StrategyRepositoryInterface::class => StrategyRepository::class,
         SubStrategyRepositoryInterface::class => SubStrategyRepository::class,
+        CategoryRepositoryInterface::class => CategoryRepository::class,
+        MainRepositoryInterface::class => MainRepository::class,
         IndicatorRepositoryInterface::class => IndicatorRepository::class,
         TargetRepositoryInterface::class => TargetRepository::class,
         ResultRepositoryInterface::class => ResultRepository::class,

@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             KpiLevelSeeder::class,
             KpiUnitSeeder::class,
             PermissionSeeder::class,
+            MouKpi2568Seeder::class,
         ]);
     }
 }

@@ -32,4 +32,11 @@ interface DashboardRepositoryInterface
      * @return array<string, array{strategies:array<int,array{name:string,code:?string,total:int,pass:int,fail:int,pending:int}>, subStrategies:array<int,array{name:string,code:?string,strategy:?string,total:int,pass:int,fail:int,pending:int}>}>
      */
     public function breakdownByLevel(array $filters): array;
+
+    /**
+     * แนวโน้มอัตราผ่านรวม (% ของตัวชี้วัดที่ผ่าน) ย้อนหลังรายปี เรียงปีจากน้อยไปมาก
+     * ใช้วาดกราฟเส้นพื้นหลังของแดชบอร์ด
+     * @return array<int, array{year:int,pct:int,total:int,pass:int}>
+     */
+    public function passRateTrend(?string $level = null): array;
 }

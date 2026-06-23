@@ -27,10 +27,13 @@ class DashboardController extends Controller
         // แจกแจงผ่าน/ไม่ผ่าน ตามยุทธศาสตร์และกลยุทธ์ ในแต่ละระดับ
         $breakdown = $this->dashboard->breakdownByLevel(array_filter(['year' => $year, 'level' => $level]));
 
+        // แนวโน้มอัตราผ่านรวมย้อนหลังรายปี (กราฟเส้นพื้นหลัง hero)
+        $passTrend = $this->dashboard->passRateTrend($level);
+
         $indicators = $this->dashboard->indicators(array_filter(['year' => $year, 'level' => $level]));
         $statuses = $indicators->mapWithKeys(fn ($i) => [$i->id => $this->dashboard->overallStatus($i)]);
 
-        return view('dashboard.index', compact('years', 'year', 'level', 'summary', 'breakdown', 'indicators', 'statuses'));
+        return view('dashboard.index', compact('years', 'year', 'level', 'summary', 'breakdown', 'passTrend', 'indicators', 'statuses'));
     }
 
     public function monitor(Request $request): View

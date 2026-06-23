@@ -31,6 +31,12 @@ class KpiSubStrategy extends Model
         return $this->hasMany(KpiIndicator::class, 'sub_strategy_id')->orderBy('orderby');
     }
 
+    /** หมวด KPI ภายใต้กลยุทธ์นี้ */
+    public function categories(): HasMany
+    {
+        return $this->hasMany(KpiCategory::class, 'sub_strategy_id')->orderBy('orderby');
+    }
+
     /** ผู้ตรวจสอบกลยุทธ์ (อ้างอิง users) */
     public function reviewers(): BelongsToMany
     {

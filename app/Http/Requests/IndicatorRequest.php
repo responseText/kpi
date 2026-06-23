@@ -23,7 +23,7 @@ class IndicatorRequest extends FormRequest
         $needFactor = implode(',', MeasurementType::typesRequiring('factor'));
 
         return [
-            'sub_strategy_id' => ['required', 'integer', 'exists:kpi_sub_strategies,id'],
+            'kpi_main_id' => ['required', 'integer', 'exists:kpi_mains,id'],
             'level' => ['required', 'in:hospital,province,ministry'],
             'code' => ['nullable', 'string', 'max:50'],
             'name' => ['required', 'string', 'max:500'],
@@ -59,7 +59,7 @@ class IndicatorRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'sub_strategy_id' => 'กลยุทธ์',
+            'kpi_main_id' => 'KPI หลัก',
             'level' => 'ระดับ',
             'name' => 'ชื่อตัวชี้วัด',
             'year_type' => 'แบบปี',

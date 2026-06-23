@@ -18,19 +18,21 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 Route::get('/', fn () => redirect()->route('dashboard'));
 
 // ---------------------------------------------------------------------------
+// แดชบอร์ด / Monitor — เปิดสาธารณะ (ทุกคนเข้าดูได้โดยไม่ต้องล็อกอิน)
+// ทั้งหมด + แยกตามระดับ (กระทรวง/จังหวัด/โรงพยาบาล) ส่ง level ผ่าน route default
+// ---------------------------------------------------------------------------
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::get('/dashboard/ministry', [DashboardController::class, 'index'])->defaults('level', 'ministry')->name('dashboard.ministry');
+Route::get('/dashboard/province', [DashboardController::class, 'index'])->defaults('level', 'province')->name('dashboard.province');
+Route::get('/dashboard/hospital', [DashboardController::class, 'index'])->defaults('level', 'hospital')->name('dashboard.hospital');
+
+// โหมดจอ Monitor เต็มจอ (สำหรับทีวี LCD) — เปิดสาธารณะเช่นกัน
+Route::get('/monitor', [DashboardController::class, 'monitor'])->name('monitor');
+
+// ---------------------------------------------------------------------------
 // Application (ต้อง login)
 // ---------------------------------------------------------------------------
 Route::middleware('auth')->group(function () {
-    // แดชบอร์ด — เปิดให้ผู้ใช้ที่ล็อกอินทุกคนดูได้ (ไม่ต้องมีสิทธิ์เมนู)
-    // ทั้งหมด + แยกตามระดับ (ส่ง level ผ่าน route default)
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard/ministry', [DashboardController::class, 'index'])->defaults('level', 'ministry')->name('dashboard.ministry');
-    Route::get('/dashboard/province', [DashboardController::class, 'index'])->defaults('level', 'province')->name('dashboard.province');
-    Route::get('/dashboard/hospital', [DashboardController::class, 'index'])->defaults('level', 'hospital')->name('dashboard.hospital');
-
-    // โหมดจอ Monitor เต็มจอ (สำหรับทีวี LCD) — เปิดให้ทุกคนเช่นกัน
-    Route::get('/monitor', [DashboardController::class, 'monitor'])->name('monitor');
-
     // ข้อมูลส่วนตัว (ทุกผู้ใช้แก้ไขของตัวเองได้ — ไม่ต้องมีสิทธิ์เมนู)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

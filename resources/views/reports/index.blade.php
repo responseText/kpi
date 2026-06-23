@@ -66,7 +66,7 @@
                             @foreach ($items as $ind)
                                 <tr>
                                     <td class="px-3 py-2 font-medium text-slate-700">{{ $ind->name }}</td>
-                                    <td class="px-3 py-2 text-slate-500">{{ $ind->subStrategy?->strategy?->name }}</td>
+                                    <td class="px-3 py-2 text-slate-500">{{ $ind->main?->category?->name }}</td>
                                     <td class="px-3 py-2">
                                         <div class="flex flex-wrap gap-1">
                                             @foreach ($ind->targets as $t)

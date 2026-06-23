@@ -53,7 +53,7 @@ class KpiIndicator extends Model
     ];
 
     protected $fillable = [
-        'sub_strategy_id', 'level', 'code', 'name', 'year_type', 'year',
+        'kpi_main_id', 'sub_strategy_id', 'level', 'code', 'name', 'year_type', 'year',
         'period_type', 'unit', 'measurement_type', 'numerator_label',
         'denominator_label', 'formula', 'factor', 'description', 'orderby', 'status',
     ];
@@ -62,6 +62,12 @@ class KpiIndicator extends Model
         'year' => 'integer',
         'factor' => 'decimal:4',
     ];
+
+    /** KPI หลัก ที่ตัวชี้วัดนี้สังกัด (โครงสร้างใหม่: หมวด KPI → KPI หลัก → ตัวชี้วัด) */
+    public function main(): BelongsTo
+    {
+        return $this->belongsTo(KpiMain::class, 'kpi_main_id');
+    }
 
     public function subStrategy(): BelongsTo
     {

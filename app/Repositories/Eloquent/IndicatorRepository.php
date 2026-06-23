@@ -21,7 +21,7 @@ class IndicatorRepository extends BaseRepository implements IndicatorRepositoryI
     private function baseFilteredQuery(array $filters): Builder
     {
         return $this->query()
-            ->with(['subStrategy.strategy', 'owners', 'targets.result'])
+            ->with(['main.category', 'owners', 'targets.result'])
             ->when($filters['level'] ?? null, fn ($q, $v) => $q->where('level', $v))
             ->when($filters['year'] ?? null, fn ($q, $v) => $q->where('year', $v))
             ->when($filters['year_type'] ?? null, fn ($q, $v) => $q->where('year_type', $v))
@@ -90,7 +90,7 @@ class IndicatorRepository extends BaseRepository implements IndicatorRepositoryI
     public function loadFull(KpiIndicator $indicator): KpiIndicator
     {
         return $indicator->load([
-            'subStrategy.strategy',
+            'main.category',
             'owners',
             'targets.result.recorder',
         ]);
