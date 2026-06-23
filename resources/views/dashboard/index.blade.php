@@ -338,60 +338,60 @@
         });
     </script>
 
-    {{-- ===================== แจกแจงตามยุทธศาสตร์/กลยุทธ์ รายระดับ ===================== --}}
+    {{-- ===================== แจกแจงตามหมวด KPI / KPI หลัก รายระดับ ===================== --}}
     @foreach ($summary as $lvlKey => $s)
         @php
             $m = $levelMeta[$lvlKey] ?? ['icon' => 'level', 'grad' => 'from-slate-500 to-slate-700'];
-            $strategies = $breakdown[$lvlKey]['strategies'] ?? [];
-            $subStrategies = $breakdown[$lvlKey]['subStrategies'] ?? [];
+            $categories = $breakdown[$lvlKey]['categories'] ?? [];
+            $mains = $breakdown[$lvlKey]['mains'] ?? [];
         @endphp
         <div class="mt-8">
             <div class="mb-3 flex items-center gap-2.5">
                 <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br {{ $m['grad'] }} text-white shadow"><x-icon :name="$m['icon']" class="h-5 w-5" /></span>
                 <div>
-                    <h3 class="font-semibold text-slate-800">แจกแจงตามยุทธศาสตร์/กลยุทธ์</h3>
+                    <h3 class="font-semibold text-slate-800">แจกแจงตามหมวด KPI / KPI หลัก</h3>
                     <p class="text-xs text-slate-400">ระดับ{{ KpiIndicator::LEVELS[$lvlKey] ?? $lvlKey }} · ปี {{ $year }}</p>
                 </div>
             </div>
             <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                {{-- ยุทธศาสตร์ --}}
+                {{-- หมวด KPI --}}
                 <div class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                     <div class="mb-3 flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <x-icon name="strategy" class="h-4 w-4 text-indigo-500" />
-                            <h4 class="font-semibold text-slate-800">ยุทธศาสตร์</h4>
+                            <x-icon name="category" class="h-4 w-4 text-indigo-500" />
+                            <h4 class="font-semibold text-slate-800">หมวด KPI</h4>
                         </div>
-                        <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-sm font-semibold text-indigo-700">{{ count($strategies) }}</span>
+                        <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-sm font-semibold text-indigo-700">{{ count($categories) }}</span>
                     </div>
-                    @if (count($strategies) > 0)
-                        <div class="mb-4" style="height: {{ max(120, count($strategies) * 42) }}px;">
+                    @if (count($categories) > 0)
+                        <div class="mb-4" style="height: {{ max(120, count($categories) * 42) }}px;">
                             <canvas class="kpi-breakdown-chart"
-                                data-labels="{{ json_encode(array_values(array_map(fn ($r) => $r['name'], $strategies)), JSON_UNESCAPED_UNICODE) }}"
-                                data-pass="{{ json_encode(array_values(array_map(fn ($r) => $r['pass'], $strategies))) }}"
-                                data-fail="{{ json_encode(array_values(array_map(fn ($r) => $r['fail'], $strategies))) }}"
-                                data-pending="{{ json_encode(array_values(array_map(fn ($r) => $r['pending'], $strategies))) }}"></canvas>
+                                data-labels="{{ json_encode(array_values(array_map(fn ($r) => $r['name'], $categories)), JSON_UNESCAPED_UNICODE) }}"
+                                data-pass="{{ json_encode(array_values(array_map(fn ($r) => $r['pass'], $categories))) }}"
+                                data-fail="{{ json_encode(array_values(array_map(fn ($r) => $r['fail'], $categories))) }}"
+                                data-pending="{{ json_encode(array_values(array_map(fn ($r) => $r['pending'], $categories))) }}"></canvas>
                         </div>
                     @endif
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="text-left text-xs uppercase tracking-wide text-slate-400">
                                 <tr>
-                                    <th class="py-2 pr-3">ยุทธศาสตร์</th>
+                                    <th class="py-2 pr-3">หมวด KPI</th>
                                     <th class="px-2 py-2 text-center">ผ่าน</th>
                                     <th class="px-2 py-2 text-center">ไม่ผ่าน</th>
                                     <th class="px-2 py-2 text-center">รอ</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                @forelse ($strategies as $st)
+                                @forelse ($categories as $cat)
                                     <tr class="transition hover:bg-slate-50/70">
                                         <td class="py-2.5 pr-3">
-                                            <div class="font-medium text-slate-800">{{ $st['name'] }}</div>
-                                            @if (!empty($st['code']))<div class="text-xs text-slate-400">{{ $st['code'] }}</div>@endif
+                                            <div class="font-medium text-slate-800">{{ $cat['name'] }}</div>
+                                            @if (!empty($cat['code']))<div class="text-xs text-slate-400">{{ $cat['code'] }}</div>@endif
                                         </td>
-                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-emerald-600">{{ $st['pass'] }}</span></td>
-                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-red-600">{{ $st['fail'] }}</span></td>
-                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-slate-400">{{ $st['pending'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-emerald-600">{{ $cat['pass'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-red-600">{{ $cat['fail'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-slate-400">{{ $cat['pending'] }}</span></td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="4" class="py-6 text-center text-slate-400">ยังไม่มีข้อมูล</td></tr>
@@ -401,44 +401,44 @@
                     </div>
                 </div>
 
-                {{-- กลยุทธ์ --}}
+                {{-- KPI หลัก --}}
                 <div class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                     <div class="mb-3 flex items-center justify-between">
                         <div class="flex items-center gap-2">
-                            <x-icon name="sub_strategy" class="h-4 w-4 text-violet-500" />
-                            <h4 class="font-semibold text-slate-800">กลยุทธ์</h4>
+                            <x-icon name="main" class="h-4 w-4 text-violet-500" />
+                            <h4 class="font-semibold text-slate-800">KPI หลัก</h4>
                         </div>
-                        <span class="rounded-full bg-violet-50 px-2.5 py-0.5 text-sm font-semibold text-violet-700">{{ count($subStrategies) }}</span>
+                        <span class="rounded-full bg-violet-50 px-2.5 py-0.5 text-sm font-semibold text-violet-700">{{ count($mains) }}</span>
                     </div>
-                    @if (count($subStrategies) > 0)
-                        <div class="mb-4" style="height: {{ max(120, count($subStrategies) * 42) }}px;">
+                    @if (count($mains) > 0)
+                        <div class="mb-4" style="height: {{ max(120, count($mains) * 42) }}px;">
                             <canvas class="kpi-breakdown-chart"
-                                data-labels="{{ json_encode(array_values(array_map(fn ($r) => $r['name'], $subStrategies)), JSON_UNESCAPED_UNICODE) }}"
-                                data-pass="{{ json_encode(array_values(array_map(fn ($r) => $r['pass'], $subStrategies))) }}"
-                                data-fail="{{ json_encode(array_values(array_map(fn ($r) => $r['fail'], $subStrategies))) }}"
-                                data-pending="{{ json_encode(array_values(array_map(fn ($r) => $r['pending'], $subStrategies))) }}"></canvas>
+                                data-labels="{{ json_encode(array_values(array_map(fn ($r) => $r['name'], $mains)), JSON_UNESCAPED_UNICODE) }}"
+                                data-pass="{{ json_encode(array_values(array_map(fn ($r) => $r['pass'], $mains))) }}"
+                                data-fail="{{ json_encode(array_values(array_map(fn ($r) => $r['fail'], $mains))) }}"
+                                data-pending="{{ json_encode(array_values(array_map(fn ($r) => $r['pending'], $mains))) }}"></canvas>
                         </div>
                     @endif
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="text-left text-xs uppercase tracking-wide text-slate-400">
                                 <tr>
-                                    <th class="py-2 pr-3">กลยุทธ์</th>
+                                    <th class="py-2 pr-3">KPI หลัก</th>
                                     <th class="px-2 py-2 text-center">ผ่าน</th>
                                     <th class="px-2 py-2 text-center">ไม่ผ่าน</th>
                                     <th class="px-2 py-2 text-center">รอ</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
-                                @forelse ($subStrategies as $sub)
+                                @forelse ($mains as $mn)
                                     <tr class="transition hover:bg-slate-50/70">
                                         <td class="py-2.5 pr-3">
-                                            <div class="font-medium text-slate-800">{{ $sub['name'] }}</div>
-                                            @if (!empty($sub['strategy']))<div class="text-xs text-slate-400">{{ $sub['strategy'] }}</div>@endif
+                                            <div class="font-medium text-slate-800">{{ $mn['name'] }}</div>
+                                            @if (!empty($mn['category']))<div class="text-xs text-slate-400">{{ $mn['category'] }}</div>@endif
                                         </td>
-                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-emerald-600">{{ $sub['pass'] }}</span></td>
-                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-red-600">{{ $sub['fail'] }}</span></td>
-                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-slate-400">{{ $sub['pending'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-emerald-600">{{ $mn['pass'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-red-600">{{ $mn['fail'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-slate-400">{{ $mn['pending'] }}</span></td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="4" class="py-6 text-center text-slate-400">ยังไม่มีข้อมูล</td></tr>
@@ -469,7 +469,7 @@
                     <tr>
                         <th class="px-6 py-3">ตัวชี้วัด</th>
                         <th class="px-5 py-3">ระดับ</th>
-                        <th class="px-5 py-3">ยุทธศาสตร์</th>
+                        <th class="px-5 py-3">หมวด KPI</th>
                         <th class="px-5 py-3">รูปแบบ</th>
                         <th class="px-5 py-3 text-center">สถานะ</th>
                     </tr>
@@ -482,7 +482,7 @@
                                 @if ($ind->code)<div class="text-xs text-slate-400">{{ $ind->code }}</div>@endif
                             </td>
                             <td class="px-5 py-3.5 text-slate-600">{{ $ind->level_label }}</td>
-                            <td class="px-5 py-3.5 text-slate-600">{{ $ind->subStrategy?->strategy?->name ?? '-' }}</td>
+                            <td class="px-5 py-3.5 text-slate-600">{{ $ind->main?->category?->name ?? '-' }}</td>
                             <td class="px-5 py-3.5 text-slate-600">{{ $ind->year_type_label }} · {{ $ind->period_type_label }}</td>
                             <td class="px-5 py-3.5 text-center"><x-status-badge :status="$statuses[$ind->id] ?? 'pending'" /></td>
                         </tr>

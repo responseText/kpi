@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\KpiCategory;
 use App\Models\KpiIndicator;
 use App\Models\KpiLevel;
+use App\Models\KpiMain;
 use App\Models\KpiStrategy;
 use App\Models\KpiSubStrategy;
 use App\Models\Menu;
@@ -84,12 +86,14 @@ class IndicatorYearScopeTest extends TestCase
             'strategy_id' => KpiStrategy::create(['year' => 2569, 'level' => 'hospital', 'name' => 'ยุทธ์สร้าง', 'status' => 'enable'])->id,
             'name' => 'กลยุทธ์สร้าง', 'status' => 'enable',
         ]);
+        $category = KpiCategory::create(['sub_strategy_id' => $sub->id, 'name' => 'หมวด KPI สร้าง', 'status' => 'enable']);
+        $main = KpiMain::create(['category_id' => $category->id, 'name' => 'KPI หลัก สร้าง', 'status' => 'enable']);
 
         $admin = $this->hospitalAdmin(2569);
         $this->grantMenu($admin, 'kpi.indicator');
 
         $base = [
-            'sub_strategy_id' => $sub->id, 'level' => 'hospital',
+            'kpi_main_id' => $main->id, 'level' => 'hospital',
             'year_type' => 'buddhist', 'period_type' => 'annual', 'status' => 'enable',
             'owners' => [$admin->id], 'primary_owner' => $admin->id,
         ];

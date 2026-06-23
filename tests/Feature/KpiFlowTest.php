@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\KpiCategory;
 use App\Models\KpiIndicator;
 use App\Models\KpiLevel;
+use App\Models\KpiMain;
 use App\Models\KpiResult;
 use App\Models\KpiStrategy;
 use App\Models\KpiSubStrategy;
@@ -47,9 +49,13 @@ class KpiFlowTest extends TestCase
         $subStrategy = KpiSubStrategy::where('name', 'กลยุทธ์ทดสอบ')->firstOrFail();
         $this->assertEquals(1, $subStrategy->reviewers()->count());
 
+        // 2.5) สร้างหมวด KPI + KPI หลัก (ตัวชี้วัดอยู่ภายใต้ KPI หลัก)
+        $category = KpiCategory::create(['sub_strategy_id' => $subStrategy->id, 'name' => 'หมวด KPI ทดสอบ', 'status' => 'enable']);
+        $main = KpiMain::create(['category_id' => $category->id, 'name' => 'KPI หลัก ทดสอบ', 'status' => 'enable']);
+
         // 3) สร้างตัวชี้วัด (ปีงบประมาณ + รายไตรมาส) → ต้องได้ 4 targets
         $this->actingAs($admin)->post('/indicators', [
-            'sub_strategy_id' => $subStrategy->id, 'level' => 'hospital', 'name' => 'ตัวชี้วัดทดสอบ',
+            'kpi_main_id' => $main->id, 'level' => 'hospital', 'name' => 'ตัวชี้วัดทดสอบ',
             'year_type' => 'fiscal', 'year' => 2569, 'period_type' => 'quarterly', 'unit' => 'ร้อยละ',
             'status' => 'enable', 'owners' => [$admin->id], 'primary_owner' => $admin->id,
         ])->assertRedirect();
@@ -222,8 +228,10 @@ class KpiFlowTest extends TestCase
         $sub = KpiSubStrategy::create([
             'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์จัดการตัวชี้วัด', 'status' => 'enable',
         ]);
+        $category = KpiCategory::create(['sub_strategy_id' => $sub->id, 'name' => 'หมวด KPI จัดการตัวชี้วัด', 'status' => 'enable']);
+        $main = KpiMain::create(['category_id' => $category->id, 'name' => 'KPI หลัก จัดการตัวชี้วัด', 'status' => 'enable']);
         $hospital = KpiIndicator::create([
-            'sub_strategy_id' => $sub->id, 'level' => 'hospital', 'name' => 'INDMARK ตชว.รพ',
+            'kpi_main_id' => $main->id, 'level' => 'hospital', 'name' => 'INDMARK ตชว.รพ',
             'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
         ]);
         $ministry = KpiIndicator::create([
@@ -263,7 +271,7 @@ class KpiFlowTest extends TestCase
 
         // สร้างตัวชี้วัดระดับกระทรวง → ถูกปฏิเสธ (สร้างได้เฉพาะระดับของตน)
         $ministryPayload = [
-            'sub_strategy_id' => $sub->id, 'level' => 'ministry', 'name' => 'INDMARK สร้างกระทรวง',
+            'kpi_main_id' => $main->id, 'level' => 'ministry', 'name' => 'INDMARK สร้างกระทรวง',
             'year_type' => 'buddhist', 'year' => 2569, 'period_type' => 'annual', 'status' => 'enable',
             'owners' => [$hospitalAdmin->id], 'primary_owner' => $hospitalAdmin->id,
         ];

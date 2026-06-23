@@ -54,7 +54,7 @@
                                 @if ($ind->measurement_type)
                                     <span class="ml-1 inline-block rounded bg-indigo-50 px-1.5 py-0.5 text-[11px] text-indigo-600">{{ $ind->measurement_type_label }}</span>
                                 @endif
-                                <div class="text-xs text-slate-400">{{ $ind->subStrategy?->strategy?->name }} › {{ $ind->subStrategy?->name }}</div>
+                                <div class="text-xs text-slate-400">{{ $ind->main?->category?->name }} › {{ $ind->main?->name }}</div>
                             </td>
                             <td class="px-5 py-3 text-slate-600">{{ $ind->level_label }}</td>
                             <td class="px-5 py-3 text-slate-600">

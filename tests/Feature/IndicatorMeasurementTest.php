@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\KpiCategory;
 use App\Models\KpiIndicator;
-use App\Models\KpiStrategy;
-use App\Models\KpiSubStrategy;
+use App\Models\KpiMain;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -22,23 +22,21 @@ class IndicatorMeasurementTest extends TestCase
         return User::findOrFail(1);
     }
 
-    /** สร้างกลยุทธ์ให้ใช้เป็นที่อยู่ของตัวชี้วัด แล้วคืน id */
-    private function makeSubStrategy(): int
+    /** สร้าง KPI หลัก (ภายใต้หมวด KPI) ให้ใช้เป็นที่อยู่ของตัวชี้วัด แล้วคืน id */
+    private function makeMain(): int
     {
-        $strategy = KpiStrategy::create([
-            'year' => 2569, 'code' => 'MT', 'name' => 'ยุทธศาสตร์ประเภทการวัดMTEST', 'status' => 'enable',
-        ]);
-        $sub = KpiSubStrategy::create([
-            'strategy_id' => $strategy->id, 'name' => 'กลยุทธ์ประเภทการวัดMTEST', 'status' => 'enable',
+        $category = KpiCategory::create(['name' => 'หมวด KPI ประเภทการวัดMTEST', 'status' => 'enable']);
+        $main = KpiMain::create([
+            'category_id' => $category->id, 'name' => 'KPI หลัก ประเภทการวัดMTEST', 'status' => 'enable',
         ]);
 
-        return $sub->id;
+        return $main->id;
     }
 
     private function payload(array $overrides = []): array
     {
         return array_merge([
-            'sub_strategy_id' => $this->makeSubStrategy(),
+            'kpi_main_id' => $this->makeMain(),
             'level' => 'hospital',
             'name' => 'ตัวชี้วัดประเภทการวัดMTEST',
             'year_type' => 'fiscal',

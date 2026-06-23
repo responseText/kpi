@@ -2,7 +2,7 @@
 
 @php
     use App\Services\PermissionService;
-    $navItems = auth()->check() ? app(PermissionService::class)->navigationFor(auth()->user()) : collect();
+    $navItems = app(PermissionService::class)->navigationFor(auth()->user());
     $currentRoute = request()->route()?->getName();
 @endphp
 
@@ -81,30 +81,37 @@
                 <h1 class="truncate text-base font-semibold text-slate-800">{{ $header ?? $title }}</h1>
             </div>
 
-            <div x-data="{ open: false }" class="relative">
-                <button @click="open = !open" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
-                        {{ mb_substr(auth()->user()->display_name, 0, 1) }}
-                    </span>
-                    <span class="hidden text-sm font-medium text-slate-700 sm:block">{{ auth()->user()->display_name }}</span>
-                </button>
-                <div x-show="open" x-cloak @click.outside="open = false"
-                     class="absolute right-0 mt-2 w-48 rounded-xl bg-white py-1 shadow-lg ring-1 ring-slate-200">
-                    <div class="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
-                        {{ auth()->user()->name }}
+            @auth
+                <div x-data="{ open: false }" class="relative">
+                    <button @click="open = !open" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
+                            {{ mb_substr(auth()->user()->display_name, 0, 1) }}
+                        </span>
+                        <span class="hidden text-sm font-medium text-slate-700 sm:block">{{ auth()->user()->display_name }}</span>
+                    </button>
+                    <div x-show="open" x-cloak @click.outside="open = false"
+                         class="absolute right-0 mt-2 w-48 rounded-xl bg-white py-1 shadow-lg ring-1 ring-slate-200">
+                        <div class="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
+                            {{ auth()->user()->name }}
+                        </div>
+                        <a href="{{ route('profile.edit') }}"
+                           class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+                            <x-icon name="user" class="w-4 h-4" /> ข้อมูลส่วนตัว
+                        </a>
+                        <form method="POST" action="{{ route('logout') }}" class="border-t border-slate-100">
+                            @csrf
+                            <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
+                                <x-icon name="logout" class="w-4 h-4" /> ออกจากระบบ
+                            </button>
+                        </form>
                     </div>
-                    <a href="{{ route('profile.edit') }}"
-                       class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
-                        <x-icon name="user" class="w-4 h-4" /> ข้อมูลส่วนตัว
-                    </a>
-                    <form method="POST" action="{{ route('logout') }}" class="border-t border-slate-100">
-                        @csrf
-                        <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                            <x-icon name="logout" class="w-4 h-4" /> ออกจากระบบ
-                        </button>
-                    </form>
                 </div>
-            </div>
+            @else
+                <a href="{{ route('login') }}"
+                   class="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-indigo-700">
+                    <x-icon name="logout" class="w-4 h-4" /> เข้าสู่ระบบ
+                </a>
+            @endauth
         </header>
 
         {{-- Flash --}}

@@ -19,7 +19,7 @@ class DashboardRepository implements DashboardRepositoryInterface
     {
         return KpiIndicator::query()
             ->enabled()
-            ->with(['subStrategy.strategy', 'targets.result', 'owners.employee'])
+            ->with(['main.category', 'targets.result', 'owners.employee'])
             ->when($filters['year'] ?? null, fn ($q, $v) => $q->where('year', $v))
             ->when($filters['level'] ?? null, fn ($q, $v) => $q->where('level', $v))
             ->orderBy('level')
@@ -52,9 +52,9 @@ class DashboardRepository implements DashboardRepositoryInterface
         $indicators = $this->indicators($filters);
 
         $result = [
-            KpiIndicator::LEVEL_HOSPITAL => ['strategies' => [], 'subStrategies' => []],
-            KpiIndicator::LEVEL_PROVINCE => ['strategies' => [], 'subStrategies' => []],
-            KpiIndicator::LEVEL_MINISTRY => ['strategies' => [], 'subStrategies' => []],
+            KpiIndicator::LEVEL_HOSPITAL => ['categories' => [], 'mains' => []],
+            KpiIndicator::LEVEL_PROVINCE => ['categories' => [], 'mains' => []],
+            KpiIndicator::LEVEL_MINISTRY => ['categories' => [], 'mains' => []],
         ];
 
         foreach ($indicators as $ind) {
@@ -63,22 +63,22 @@ class DashboardRepository implements DashboardRepositoryInterface
             }
 
             $status = $this->overallStatus($ind);   // pass | fail | pending
-            $sub = $ind->subStrategy;
-            $strategy = $sub?->strategy;
+            $main = $ind->main;
+            $category = $main?->category;
 
-            // นับตามยุทธศาสตร์ (ผ่าน/ไม่ผ่าน/รอ ของตัวชี้วัดภายใต้ยุทธศาสตร์นั้น)
-            if ($strategy) {
-                $bucket = &$result[$ind->level]['strategies'][$strategy->id];
-                $bucket ??= ['name' => $strategy->name, 'code' => $strategy->code, 'total' => 0, 'pass' => 0, 'fail' => 0, 'pending' => 0];
+            // นับตามหมวด KPI (ผ่าน/ไม่ผ่าน/รอ ของตัวชี้วัดภายใต้หมวดนั้น)
+            if ($category) {
+                $bucket = &$result[$ind->level]['categories'][$category->id];
+                $bucket ??= ['name' => $category->name, 'code' => $category->code, 'total' => 0, 'pass' => 0, 'fail' => 0, 'pending' => 0];
                 $bucket['total']++;
                 $bucket[$status]++;
                 unset($bucket);
             }
 
-            // นับตามกลยุทธ์
-            if ($sub) {
-                $bucket = &$result[$ind->level]['subStrategies'][$sub->id];
-                $bucket ??= ['name' => $sub->name, 'code' => $sub->code, 'strategy' => $strategy?->name, 'total' => 0, 'pass' => 0, 'fail' => 0, 'pending' => 0];
+            // นับตาม KPI หลัก
+            if ($main) {
+                $bucket = &$result[$ind->level]['mains'][$main->id];
+                $bucket ??= ['name' => $main->name, 'code' => $main->code, 'category' => $category?->name, 'total' => 0, 'pass' => 0, 'fail' => 0, 'pending' => 0];
                 $bucket['total']++;
                 $bucket[$status]++;
                 unset($bucket);

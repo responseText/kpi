@@ -2,30 +2,20 @@
     $ind = $indicator ?? null;
     $selectedOwners = old('owners', $ind ? $ind->owners->pluck('id')->all() : []);
     $primaryOwner = old('primary_owner', $ind?->owners->firstWhere('pivot.is_primary', true)?->id);
-    $subStrategyYears = $subStrategyOptions->pluck('strategy.year')->filter()->unique()->sortDesc()->values();
+    $mainsByCategory = $mainOptions->groupBy(fn ($m) => $m->category?->name ?? 'ไม่ระบุหมวด KPI');
 @endphp
 
-{{-- กรองกลยุทธ์ตามปี — เลือกปีเพื่อให้ช่อง "กลยุทธ์" แสดงเฉพาะของปีที่เลือก --}}
-<div class="mb-4">
-    <label for="ind-year-filter" class="mb-1 block text-sm font-medium text-slate-700">ปี (กรองกลยุทธ์)</label>
-    <select id="ind-year-filter"
-        class="w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:max-w-xs">
-        <option value="">— ทุกปี —</option>
-        @foreach ($subStrategyYears as $y)
-            <option value="{{ $y }}">{{ $y }}</option>
-        @endforeach
-    </select>
-    <p class="mt-1 text-xs text-slate-400">เลือกปีและระดับตัวชี้วัดเพื่อแสดงเฉพาะกลยุทธ์ (ภายใต้ยุทธศาสตร์) ที่สัมพันธ์กันในช่องด้านล่าง</p>
-</div>
-
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    <x-form.select name="sub_strategy_id" label="กลยุทธ์ (ภายใต้ยุทธศาสตร์)" :required="true">
-        <option value="">— เลือกกลยุทธ์ —</option>
-        @foreach ($subStrategyOptions as $opt)
-            <option value="{{ $opt->id }}" data-year="{{ $opt->strategy?->year }}" data-level="{{ $opt->strategy?->level }}"
-                @selected(old('sub_strategy_id', $ind->sub_strategy_id ?? '') == $opt->id)>
-                [{{ $opt->strategy?->year }} · {{ $opt->strategy?->level_label }}] {{ $opt->strategy?->name }} › {{ $opt->name }}
-            </option>
+    <x-form.select name="kpi_main_id" label="KPI หลัก (ภายใต้หมวด KPI)" :required="true">
+        <option value="">— เลือก KPI หลัก —</option>
+        @foreach ($mainsByCategory as $categoryName => $mains)
+            <optgroup label="{{ $categoryName }}">
+                @foreach ($mains as $opt)
+                    <option value="{{ $opt->id }}" @selected(old('kpi_main_id', $ind->kpi_main_id ?? '') == $opt->id)>
+                        {{ $opt->code ? '['.$opt->code.'] ' : '' }}{{ $opt->name }}
+                    </option>
+                @endforeach
+            </optgroup>
         @endforeach
     </x-form.select>
 
@@ -211,38 +201,3 @@
     <x-btn type="submit" variant="primary">บันทึก</x-btn>
     <x-btn :href="route('indicators.index')" variant="secondary">ยกเลิก</x-btn>
 </div>
-
-@push('scripts')
-    <script>
-        (function () {
-            const yearFilter = document.getElementById('ind-year-filter');
-            const levelSel = document.getElementById('level');
-            const sel = document.getElementById('sub_strategy_id');
-            if (!yearFilter || !sel) return;
-
-            // แสดงเฉพาะกลยุทธ์ที่ตรงทั้งปี (ค่าว่าง = ทุกปี) และระดับตัวชี้วัดที่เลือก
-            function apply(resetIfHidden) {
-                const year = yearFilter.value;
-                const level = levelSel ? levelSel.value : '';
-                let hideSelected = false;
-                Array.from(sel.options).forEach(opt => {
-                    if (!opt.value) return; // คงตัวเลือก placeholder ไว้
-                    const match = (!year || opt.dataset.year === year)
-                        && (!level || opt.dataset.level === level);
-                    opt.hidden = !match;
-                    opt.disabled = !match;
-                    if (!match && opt.selected) hideSelected = true;
-                });
-                if (resetIfHidden && hideSelected) sel.value = ''; // เปลี่ยนตัวกรองแล้วตัวที่เลือกหลุดเงื่อนไข → รีเซ็ต
-            }
-
-            // โหมดแก้ไข/หลัง validation: ตั้งปีให้ตรงกับกลยุทธ์ที่เลือกอยู่ แล้วกรองโดยไม่รีเซ็ตตัวที่เลือก
-            const current = sel.options[sel.selectedIndex];
-            if (current && current.value && current.dataset.year) yearFilter.value = current.dataset.year;
-
-            yearFilter.addEventListener('change', () => apply(true));
-            if (levelSel) levelSel.addEventListener('change', () => apply(true));
-            apply(false);
-        })();
-    </script>
-@endpush

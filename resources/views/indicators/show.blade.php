@@ -32,8 +32,8 @@
                         <div><dt class="text-slate-400">สูตรคำนวณ</dt>
                             <dd class="font-medium text-slate-700">{{ $indicator->formula_display ?: '-' }}</dd></div>
                     @endif
-                    <div class="col-span-2 sm:col-span-3"><dt class="text-slate-400">ยุทธศาสตร์ › กลยุทธ์</dt>
-                        <dd class="font-medium text-slate-700">{{ $indicator->subStrategy?->strategy?->name }} › {{ $indicator->subStrategy?->name }}</dd></div>
+                    <div class="col-span-2 sm:col-span-3"><dt class="text-slate-400">หมวด KPI › KPI หลัก</dt>
+                        <dd class="font-medium text-slate-700">{{ $indicator->main?->category?->name }} › {{ $indicator->main?->name }}</dd></div>
                     @if ($indicator->numerator_label)
                         <div class="col-span-2 sm:col-span-3 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3">
                             <div><dt class="text-slate-400">ตัวตั้ง (A)</dt><dd class="font-medium text-slate-700">{{ $indicator->numerator_label }}</dd></div>

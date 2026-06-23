@@ -60,7 +60,7 @@
                                         </span>
                                     @endif
                                 </div>
-                                <div class="text-xs text-slate-400">{{ $ind->subStrategy?->strategy?->name }}</div>
+                                <div class="text-xs text-slate-400">{{ $ind->main?->category?->name }}</div>
                             </td>
                             <td class="px-5 py-3 text-slate-600">{{ $ind->level_label }}</td>
                             <td class="px-5 py-3 text-slate-600">{{ $ind->period_type === 'quarterly' ? 'รายไตรมาส' : 'รายปี' }}</td>

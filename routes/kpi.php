@@ -5,8 +5,10 @@
  * การตรวจสิทธิ์ต่อ action กำหนดในแต่ละ Controller (HasMiddleware → menu:<code>,<action>)
  */
 
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\IndicatorController;
 use App\Http\Controllers\LevelManagerController;
+use App\Http\Controllers\MainController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ResultController;
@@ -26,6 +28,16 @@ Route::resource('strategies', StrategyController::class)
 Route::resource('sub-strategies', SubStrategyController::class)
     ->parameters(['sub-strategies' => 'subStrategy'])
     ->except(['show'])->names('sub-strategies');
+
+// หมวด KPI
+Route::resource('categories', CategoryController::class)
+    ->parameters(['categories' => 'category'])
+    ->except(['show'])->names('categories');
+
+// KPI หลัก
+Route::resource('mains', MainController::class)
+    ->parameters(['mains' => 'main'])
+    ->except(['show'])->names('mains');
 
 // ตัวชี้วัด
 Route::resource('indicators', IndicatorController::class)

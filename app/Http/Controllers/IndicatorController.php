@@ -6,9 +6,9 @@ use App\Http\Requests\IndicatorRequest;
 use App\Models\KpiIndicator;
 use App\Models\KpiUnit;
 use App\Repositories\Contracts\IndicatorRepositoryInterface;
+use App\Repositories\Contracts\MainRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Repositories\Contracts\StrategyRepositoryInterface;
-use App\Repositories\Contracts\SubStrategyRepositoryInterface;
 use App\Repositories\Contracts\TargetRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +20,7 @@ class IndicatorController extends Controller implements HasMiddleware
 {
     public function __construct(
         private readonly IndicatorRepositoryInterface $indicators,
-        private readonly SubStrategyRepositoryInterface $subStrategies,
+        private readonly MainRepositoryInterface $mains,
         private readonly StrategyRepositoryInterface $strategies,
         private readonly TargetRepositoryInterface $targets,
         private readonly PermissionRepositoryInterface $permissions,
@@ -161,7 +161,7 @@ class IndicatorController extends Controller implements HasMiddleware
     private function formData(Request $request): array
     {
         return [
-            'subStrategyOptions' => $this->subStrategies->query()->with('strategy')->orderBy('orderby')->get(),
+            'mainOptions' => $this->mains->query()->with('category')->orderBy('orderby')->get(),
             'users' => $this->permissions->selectableUsers(),
             'levels' => $this->levelsFor($request),
             'yearTypes' => KpiIndicator::YEAR_TYPES,
