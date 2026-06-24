@@ -187,6 +187,7 @@ class CategoryController extends Controller implements HasMiddleware
         return [
             'subStrategyOptions' => $subStrategyOptions,
             'levelOptions'       => KpiStrategy::LEVELS,
+            'years'              => $this->strategies->availableYears(),
         ];
     }
 }

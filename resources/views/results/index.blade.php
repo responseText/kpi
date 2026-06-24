@@ -52,7 +52,7 @@
                         <x-icon name="search" class="h-4 w-4 {{ $active ? 'text-indigo-400' : 'text-slate-400' }}" />
                     </div>
                     <input name="search" value="{{ $filters['search'] ?? '' }}" placeholder="ชื่อหรือรหัสตัวชี้วัด"
-                        class="w-full rounded-xl border py-2.5 pl-9 pr-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-offset-0 {{ $active ? 'border-indigo-300 bg-indigo-50 text-indigo-800 placeholder:text-indigo-300 focus:border-indigo-400 focus:ring-indigo-200' : 'border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-300 focus:ring-indigo-100' }}">
+                        class="w-full rounded-xl border py-2.5 pl-10 pr-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-offset-0 {{ $active ? 'border-indigo-300 bg-indigo-50 text-indigo-800 placeholder:text-indigo-300 focus:border-indigo-400 focus:ring-indigo-200' : 'border-slate-200 bg-slate-50 text-slate-700 placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-300 focus:ring-indigo-100' }}">
                 </div>
             </div>
 

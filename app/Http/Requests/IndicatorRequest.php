@@ -30,8 +30,8 @@ class IndicatorRequest extends FormRequest
             'year_type' => ['required', 'in:buddhist,fiscal'],
             'year' => ['required', 'integer', 'min:2500', 'max:2700'],
             'period_type' => ['required', 'in:annual,quarterly'],
-            'unit' => ['nullable', 'string', 'max:50'],
-            'measurement_type' => ['nullable', Rule::in(MeasurementType::keys())],
+            'unit' => ['required', 'string', 'max:50'],
+            'measurement_type' => ['required', Rule::in(MeasurementType::keys())],
             'numerator_label' => ['nullable', 'string', 'max:255', "required_if:measurement_type,{$needA}"],
             'denominator_label' => ['nullable', 'string', 'max:255', "required_if:measurement_type,{$needB}"],
             'formula' => ['nullable', 'string', 'max:500', "required_if:measurement_type,{$needFormula}"],
@@ -77,6 +77,9 @@ class IndicatorRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'year.required' => 'ไม่สามารถระบุปีได้ — กรุณาเลือก KPI หลัก ที่มีข้อมูลยุทธศาสตร์ครบถ้วน',
+            'measurement_type.required' => 'กรุณาเลือกประเภทการวัด (Measurement Type) ก่อนบันทึก',
+            'unit.required' => 'กรุณาเลือกหน่วยวัดก่อนบันทึก',
             'owners.required' => 'ต้องเลือกผู้รับผิดชอบอย่างน้อย 1 คน',
             'owners.min' => 'ต้องเลือกผู้รับผิดชอบอย่างน้อย 1 คน',
         ];
@@ -85,6 +88,13 @@ class IndicatorRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $type = $this->input('measurement_type') ?: null;
+
+        // ดึงปีจาก KPI หลัก → หมวด KPI → กลยุทธ์ → ยุทธศาสตร์ (ไม่รับค่า year จากฟอร์มโดยตรง)
+        $year = null;
+        if ($mainId = (int) ($this->input('kpi_main_id') ?: 0)) {
+            $year = \App\Models\KpiMain::with('category.subStrategy.strategy')
+                ->find($mainId)?->category?->subStrategy?->strategy?->year;
+        }
 
         // ล้างค่าฟิลด์ที่ไม่เกี่ยวข้องกับประเภทการวัดที่เลือก (กันข้อมูลค้างจากการสลับประเภทในฟอร์ม)
         $clear = [];
@@ -96,8 +106,9 @@ class IndicatorRequest extends FormRequest
 
         $this->merge(array_merge([
             'measurement_type' => $type,
-            'orderby' => $this->orderby ?: 0,
-            'status' => $this->status ?: 'enable',
+            'year'             => $year,
+            'orderby'          => $this->orderby ?: 0,
+            'status'           => $this->status ?: 'enable',
         ], $clear));
     }
 }

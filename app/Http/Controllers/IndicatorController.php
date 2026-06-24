@@ -63,16 +63,31 @@ class IndicatorController extends Controller implements HasMiddleware
         $indicators = $this->indicators->paginateManageableLevels(array_filter($filters), $request->user());
         $years = $this->strategies->availableYears();
 
-        // Dropdown สำหรับค้นหา (cascading: ยุทธศาสตร์ → กลยุทธ์ → หมวด KPI → KPI หลัก)
-        $strategies   = KpiStrategy::orderByDesc('year')->orderBy('orderby')->get();
+        // Dropdown สำหรับค้นหา (cascading ตาม year → level → strategy → sub_strategy → category → main)
+        $strategies = KpiStrategy::query()
+            ->when($filters['year'],  fn ($q) => $q->where('year',  $filters['year']))
+            ->when($filters['level'], fn ($q) => $q->where('level', $filters['level']))
+            ->orderByDesc('year')->orderBy('orderby')->get();
+
         $subStrategies = KpiSubStrategy::query()
             ->when($filters['strategy_id'], fn ($q) => $q->where('strategy_id', $filters['strategy_id']))
+            ->when($filters['year'],  fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where('year',  $filters['year'])))
+            ->when($filters['level'], fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where('level', $filters['level'])))
             ->orderBy('orderby')->get();
+
         $categories = KpiCategory::query()
             ->when($filters['sub_strategy_id'], fn ($q) => $q->where('sub_strategy_id', $filters['sub_strategy_id']))
+            ->when($filters['strategy_id'],     fn ($q) => $q->whereHas('subStrategy', fn ($s) => $s->where('strategy_id', $filters['strategy_id'])))
+            ->when($filters['year'],  fn ($q) => $q->whereHas('subStrategy.strategy', fn ($s) => $s->where('year',  $filters['year'])))
+            ->when($filters['level'], fn ($q) => $q->whereHas('subStrategy.strategy', fn ($s) => $s->where('level', $filters['level'])))
             ->orderBy('orderby')->get();
+
         $mains = KpiMain::query()
-            ->when($filters['category_id'], fn ($q) => $q->where('category_id', $filters['category_id']))
+            ->when($filters['category_id'],     fn ($q) => $q->where('category_id', $filters['category_id']))
+            ->when($filters['sub_strategy_id'], fn ($q) => $q->whereHas('category', fn ($c) => $c->where('sub_strategy_id', $filters['sub_strategy_id'])))
+            ->when($filters['strategy_id'],     fn ($q) => $q->whereHas('category.subStrategy', fn ($s) => $s->where('strategy_id', $filters['strategy_id'])))
+            ->when($filters['year'],  fn ($q) => $q->whereHas('category.subStrategy.strategy', fn ($s) => $s->where('year',  $filters['year'])))
+            ->when($filters['level'], fn ($q) => $q->whereHas('category.subStrategy.strategy', fn ($s) => $s->where('level', $filters['level'])))
             ->orderBy('orderby')->get();
 
         return view('indicators.index', compact('indicators', 'years', 'filters', 'strategies', 'subStrategies', 'categories', 'mains'));
@@ -181,12 +196,13 @@ class IndicatorController extends Controller implements HasMiddleware
     private function formData(Request $request): array
     {
         return [
-            'mainOptions' => $this->mains->query()->with('category')->orderBy('orderby')->get(),
-            'users' => $this->permissions->selectableUsers(),
-            'levels' => $this->levelsFor($request),
-            'yearTypes' => KpiIndicator::YEAR_TYPES,
+            'mainOptions' => $this->mains->query()->with('category.subStrategy.strategy')->orderBy('orderby')->get(),
+            'years'       => $this->strategies->availableYears(),
+            'users'       => $this->permissions->selectableUsers(),
+            'levels'      => $this->levelsFor($request),
+            'yearTypes'   => KpiIndicator::YEAR_TYPES,
             'periodTypes' => KpiIndicator::PERIOD_TYPES,
-            'unitGroups' => KpiUnit::groupedEnabled(),
+            'unitGroups'  => KpiUnit::groupedEnabled(),
         ];
     }
 

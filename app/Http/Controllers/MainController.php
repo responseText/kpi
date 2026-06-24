@@ -201,6 +201,7 @@ class MainController extends Controller implements HasMiddleware
         return [
             'categoryOptions' => $categoryOptions,
             'levelOptions'    => KpiStrategy::LEVELS,
+            'years'           => $this->strategies->availableYears(),
         ];
     }
 }
