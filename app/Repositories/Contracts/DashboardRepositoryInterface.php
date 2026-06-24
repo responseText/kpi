@@ -27,9 +27,9 @@ interface DashboardRepositoryInterface
     public function summaryByLevel(array $filters): array;
 
     /**
-     * แจกแจงผ่าน/ไม่ผ่าน/รอบันทึก ของตัวชี้วัด แยกตามยุทธศาสตร์และกลยุทธ์ ในแต่ละระดับ
+     * แจกแจงผ่าน/ไม่ผ่าน/รอบันทึก ของตัวชี้วัด แยกตามยุทธศาสตร์ / หมวด KPI / KPI หลัก ในแต่ละระดับ
      * @param  array{year?:int,level?:string}  $filters
-     * @return array<string, array{strategies:array<int,array{name:string,code:?string,total:int,pass:int,fail:int,pending:int}>, subStrategies:array<int,array{name:string,code:?string,strategy:?string,total:int,pass:int,fail:int,pending:int}>}>
+     * @return array<string, array{strategies:array<int,array{name:string,code:?string,total:int,pass:int,fail:int,pending:int}>, categories:array<int,array{name:string,code:?string,total:int,pass:int,fail:int,pending:int}>, mains:array<int,array{name:string,code:?string,category:?string,total:int,pass:int,fail:int,pending:int}>}>
      */
     public function breakdownByLevel(array $filters): array;
 

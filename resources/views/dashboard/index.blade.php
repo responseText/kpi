@@ -317,7 +317,35 @@
     </script>
     @endif
 
-    {{-- กราฟแจกแจงผ่าน/ไม่ผ่าน/รอ รายยุทธศาสตร์และกลยุทธ์ (stacked bar แนวนอน) --}}
+    {{-- กราฟแท่งจัดกลุ่ม: ตัวชี้วัดผ่าน/ไม่ผ่าน/รอ รายยุทธศาสตร์ (แท่งแยก ไม่ซ้อน) --}}
+    <script>
+        window.addEventListener('load', () => {
+            if (!window.Chart) return;
+            document.querySelectorAll('.kpi-strategy-chart').forEach((cv) => {
+                new Chart(cv, {
+                    type: 'bar',
+                    data: { labels: JSON.parse(cv.dataset.labels),
+                        datasets: [
+                            { label: 'ผ่าน', data: JSON.parse(cv.dataset.pass), backgroundColor: '#10b981', borderRadius: 6, maxBarThickness: 46 },
+                            { label: 'ไม่ผ่าน', data: JSON.parse(cv.dataset.fail), backgroundColor: '#ef4444', borderRadius: 6, maxBarThickness: 46 },
+                            { label: 'รอบันทึก', data: JSON.parse(cv.dataset.pending), backgroundColor: '#cbd5e1', borderRadius: 6, maxBarThickness: 46 },
+                        ] },
+                    options: { responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 0, minRotation: 0,
+                                callback: function (v) { const s = this.getLabelForValue(v); return s.length > 16 ? s.slice(0, 16) + '…' : s; } } },
+                            y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'จำนวนตัวชี้วัด' } },
+                        },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: { callbacks: { title: (items) => items[0].label } },
+                        } }
+                });
+            });
+        });
+    </script>
+
+    {{-- กราฟแจกแจงผ่าน/ไม่ผ่าน/รอ รายหมวด KPI และ KPI หลัก (stacked bar แนวนอน) --}}
     <script>
         window.addEventListener('load', () => {
             if (!window.Chart) return;
@@ -342,9 +370,83 @@
     @foreach ($summary as $lvlKey => $s)
         @php
             $m = $levelMeta[$lvlKey] ?? ['icon' => 'level', 'grad' => 'from-slate-500 to-slate-700'];
+            $strategies = $breakdown[$lvlKey]['strategies'] ?? [];
             $categories = $breakdown[$lvlKey]['categories'] ?? [];
             $mains = $breakdown[$lvlKey]['mains'] ?? [];
+            $stratPass = array_sum(array_column($strategies, 'pass'));
+            $stratFail = array_sum(array_column($strategies, 'fail'));
+            $stratPending = array_sum(array_column($strategies, 'pending'));
         @endphp
+
+        {{-- ===== กราฟแท่งผ่าน/ไม่ผ่าน รายยุทธศาสตร์ ===== --}}
+        <div class="mt-8">
+            <div class="mb-3 flex items-center gap-2.5">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br {{ $m['grad'] }} text-white shadow"><x-icon name="strategy" class="h-5 w-5" /></span>
+                <div>
+                    <h3 class="font-semibold text-slate-800">ผลการประเมินตามยุทธศาสตร์</h3>
+                    <p class="text-xs text-slate-400">ระดับ{{ KpiIndicator::LEVELS[$lvlKey] ?? $lvlKey }} · ปี {{ $year }}</p>
+                </div>
+            </div>
+            <div class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <x-icon name="strategy" class="h-4 w-4 text-indigo-500" />
+                        <h4 class="font-semibold text-slate-800">จำนวนตัวชี้วัดผ่าน / ไม่ผ่าน แยกตามยุทธศาสตร์</h4>
+                        <span class="rounded-full bg-indigo-50 px-2.5 py-0.5 text-sm font-semibold text-indigo-700">{{ count($strategies) }} ยุทธศาสตร์</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs font-medium">
+                        <span class="inline-flex items-center gap-1.5 text-emerald-600"><span class="h-2.5 w-2.5 rounded-sm bg-emerald-500"></span> ผ่าน {{ $stratPass }}</span>
+                        <span class="inline-flex items-center gap-1.5 text-red-600"><span class="h-2.5 w-2.5 rounded-sm bg-red-500"></span> ไม่ผ่าน {{ $stratFail }}</span>
+                        <span class="inline-flex items-center gap-1.5 text-slate-500"><span class="h-2.5 w-2.5 rounded-sm bg-slate-300"></span> รอ {{ $stratPending }}</span>
+                    </div>
+                </div>
+                @if (count($strategies) > 0)
+                    <div style="height: {{ max(260, count($strategies) * 70) }}px;">
+                        <canvas class="kpi-strategy-chart"
+                            data-labels="{{ json_encode(array_values(array_map(fn ($r) => ($r['code'] ? $r['code'].' ' : '').$r['name'], $strategies)), JSON_UNESCAPED_UNICODE) }}"
+                            data-pass="{{ json_encode(array_values(array_map(fn ($r) => $r['pass'], $strategies))) }}"
+                            data-fail="{{ json_encode(array_values(array_map(fn ($r) => $r['fail'], $strategies))) }}"
+                            data-pending="{{ json_encode(array_values(array_map(fn ($r) => $r['pending'], $strategies))) }}"></canvas>
+                    </div>
+                    {{-- ตารางสรุปใต้กราฟ --}}
+                    <div class="mt-5 overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="text-left text-xs uppercase tracking-wide text-slate-400">
+                                <tr>
+                                    <th class="py-2 pr-3">ยุทธศาสตร์</th>
+                                    <th class="px-2 py-2 text-center">ทั้งหมด</th>
+                                    <th class="px-2 py-2 text-center">ผ่าน</th>
+                                    <th class="px-2 py-2 text-center">ไม่ผ่าน</th>
+                                    <th class="px-2 py-2 text-center">รอ</th>
+                                    <th class="px-2 py-2 text-center">อัตราผ่าน</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach ($strategies as $st)
+                                    @php $stPct = $st['total'] > 0 ? round($st['pass'] / $st['total'] * 100) : 0; @endphp
+                                    <tr class="transition hover:bg-slate-50/70">
+                                        <td class="py-2.5 pr-3">
+                                            <div class="font-medium text-slate-800">{{ $st['name'] }}</div>
+                                            @if (!empty($st['code']))<div class="text-xs text-slate-400">{{ $st['code'] }}</div>@endif
+                                        </td>
+                                        <td class="px-2 py-2.5 text-center font-semibold text-slate-600">{{ $st['total'] }}</td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-emerald-600">{{ $st['pass'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-red-600">{{ $st['fail'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center"><span class="font-semibold text-slate-400">{{ $st['pending'] }}</span></td>
+                                        <td class="px-2 py-2.5 text-center">
+                                            <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $stPct >= 80 ? 'bg-emerald-50 text-emerald-700' : ($stPct >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700') }}">{{ $stPct }}%</span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="grid h-40 place-items-center text-sm text-slate-400">ยังไม่มีข้อมูลยุทธศาสตร์ในระดับนี้</div>
+                @endif
+            </div>
+        </div>
+
         <div class="mt-8">
             <div class="mb-3 flex items-center gap-2.5">
                 <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br {{ $m['grad'] }} text-white shadow"><x-icon :name="$m['icon']" class="h-5 w-5" /></span>
@@ -353,7 +455,7 @@
                     <p class="text-xs text-slate-400">ระดับ{{ KpiIndicator::LEVELS[$lvlKey] ?? $lvlKey }} · ปี {{ $year }}</p>
                 </div>
             </div>
-            <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div class="grid grid-cols-1 gap-5 lg:grid-cols-1">
                 {{-- หมวด KPI --}}
                 <div class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
                     <div class="mb-3 flex items-center justify-between">

@@ -44,6 +44,6 @@
             </form>
         </div>
 
-        <p class="mt-4 text-center text-xs text-slate-400">© {{ now()->year + 543 }} รพ.ทองแสนขัน</p>
+        <p class="mt-4 text-center text-xs text-slate-400">© {{ now()->year + 543 }} สารสนเทศทางการแพทย์โรงพยาบาลทองแสนขัน</p>
     </div>
 </x-layouts.guest>

@@ -19,7 +19,7 @@ class DashboardRepository implements DashboardRepositoryInterface
     {
         return KpiIndicator::query()
             ->enabled()
-            ->with(['main.category', 'targets.result', 'owners.employee'])
+            ->with(['main.category.subStrategy.strategy', 'targets.result', 'owners.employee'])
             ->when($filters['year'] ?? null, fn ($q, $v) => $q->where('year', $v))
             ->when($filters['level'] ?? null, fn ($q, $v) => $q->where('level', $v))
             ->orderBy('level')
@@ -52,9 +52,9 @@ class DashboardRepository implements DashboardRepositoryInterface
         $indicators = $this->indicators($filters);
 
         $result = [
-            KpiIndicator::LEVEL_HOSPITAL => ['categories' => [], 'mains' => []],
-            KpiIndicator::LEVEL_PROVINCE => ['categories' => [], 'mains' => []],
-            KpiIndicator::LEVEL_MINISTRY => ['categories' => [], 'mains' => []],
+            KpiIndicator::LEVEL_HOSPITAL => ['strategies' => [], 'categories' => [], 'mains' => []],
+            KpiIndicator::LEVEL_PROVINCE => ['strategies' => [], 'categories' => [], 'mains' => []],
+            KpiIndicator::LEVEL_MINISTRY => ['strategies' => [], 'categories' => [], 'mains' => []],
         ];
 
         foreach ($indicators as $ind) {
@@ -65,6 +65,16 @@ class DashboardRepository implements DashboardRepositoryInterface
             $status = $this->overallStatus($ind);   // pass | fail | pending
             $main = $ind->main;
             $category = $main?->category;
+            $strategy = $category?->subStrategy?->strategy;
+
+            // นับตามยุทธศาสตร์ (ผ่าน/ไม่ผ่าน/รอ ของตัวชี้วัดภายใต้ยุทธศาสตร์นั้น)
+            if ($strategy) {
+                $bucket = &$result[$ind->level]['strategies'][$strategy->id];
+                $bucket ??= ['name' => $strategy->name, 'code' => $strategy->code, 'total' => 0, 'pass' => 0, 'fail' => 0, 'pending' => 0];
+                $bucket['total']++;
+                $bucket[$status]++;
+                unset($bucket);
+            }
 
             // นับตามหมวด KPI (ผ่าน/ไม่ผ่าน/รอ ของตัวชี้วัดภายใต้หมวดนั้น)
             if ($category) {
