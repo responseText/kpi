@@ -42,12 +42,23 @@ class SubStrategyController extends Controller implements HasMiddleware
     {
         $year = $request->integer('year') ?: null;
         $strategyId = $request->integer('strategy_id') ?: null;
+        $level = $request->string('level')->toString() ?: null;
 
         // กลยุทธ์สืบทอดระดับจากยุทธศาสตร์แม่ — แสดงเฉพาะระดับที่ผู้ใช้เป็นผู้ดูแล
-        $subStrategies = $this->subStrategies->paginateFiltered($year, $strategyId, $request->user());
+        $subStrategies = $this->subStrategies->paginateFiltered($year, $strategyId, $level, $request->user());
         $years = $this->strategies->availableYears();
 
-        return view('sub_strategies.index', compact('subStrategies', 'years', 'year', 'strategyId'));
+        $strategyOptions = $this->strategies->query()
+            ->when(! $request->user()->canManageAllIndicatorLevels(),
+                fn ($q) => $q->where(function ($w) use ($request) {
+                    $w->whereRaw('1 = 0');
+                    IndicatorScopeFilter::orWhereScopes($w, $request->user()->indicatorAdminScopeYears());
+                }))
+            ->orderByDesc('year')->orderBy('orderby')->get();
+
+        $levelOptions = \App\Models\KpiStrategy::LEVELS;
+
+        return view('sub_strategies.index', compact('subStrategies', 'years', 'year', 'strategyId', 'level', 'strategyOptions', 'levelOptions'));
     }
 
     public function create(Request $request): View
@@ -163,7 +174,8 @@ class SubStrategyController extends Controller implements HasMiddleware
 
         return [
             'strategyOptions' => $strategyOptions,
-            'users' => $this->permissions->selectableUsers(),
+            'levelOptions'    => \App\Models\KpiStrategy::LEVELS,
+            'users'           => $this->permissions->selectableUsers(),
         ];
     }
 }

@@ -17,7 +17,7 @@ class IndicatorRepository extends BaseRepository implements IndicatorRepositoryI
         return new KpiIndicator;
     }
 
-    /** คิวรีพื้นฐานพร้อมตัวกรอง (ระดับ/ปี/แบบปี/กลยุทธ์/ค้นหา) — ใช้ร่วมทุกเมธอด paginate */
+    /** คิวรีพื้นฐานพร้อมตัวกรอง (ระดับ/ปี/แบบปี/ยุทธศาสตร์/กลยุทธ์/หมวด/KPIหลัก/ค้นหา) — ใช้ร่วมทุกเมธอด paginate */
     private function baseFilteredQuery(array $filters): Builder
     {
         return $this->query()
@@ -25,7 +25,10 @@ class IndicatorRepository extends BaseRepository implements IndicatorRepositoryI
             ->when($filters['level'] ?? null, fn ($q, $v) => $q->where('level', $v))
             ->when($filters['year'] ?? null, fn ($q, $v) => $q->where('year', $v))
             ->when($filters['year_type'] ?? null, fn ($q, $v) => $q->where('year_type', $v))
-            ->when($filters['sub_strategy_id'] ?? null, fn ($q, $v) => $q->where('sub_strategy_id', $v))
+            ->when($filters['kpi_main_id'] ?? null, fn ($q, $v) => $q->where('kpi_main_id', $v))
+            ->when($filters['category_id'] ?? null, fn ($q, $v) => $q->whereHas('main', fn ($m) => $m->where('category_id', $v)))
+            ->when($filters['sub_strategy_id'] ?? null, fn ($q, $v) => $q->whereHas('main.category', fn ($c) => $c->where('sub_strategy_id', $v)))
+            ->when($filters['strategy_id'] ?? null, fn ($q, $v) => $q->whereHas('main.category.subStrategy', fn ($s) => $s->where('strategy_id', $v)))
             ->when($filters['search'] ?? null, function ($q, $v) {
                 $q->where(function ($w) use ($v) {
                     $w->where('name', 'like', "%{$v}%")->orWhere('code', 'like', "%{$v}%");

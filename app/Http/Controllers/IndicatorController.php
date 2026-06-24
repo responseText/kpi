@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\IndicatorRequest;
+use App\Models\KpiCategory;
 use App\Models\KpiIndicator;
+use App\Models\KpiMain;
+use App\Models\KpiStrategy;
+use App\Models\KpiSubStrategy;
 use App\Models\KpiUnit;
 use App\Repositories\Contracts\IndicatorRepositoryInterface;
 use App\Repositories\Contracts\MainRepositoryInterface;
@@ -45,17 +49,33 @@ class IndicatorController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $filters = [
-            'level' => $request->string('level')->toString() ?: null,
-            'year' => $request->integer('year') ?: null,
-            'year_type' => $request->string('year_type')->toString() ?: null,
-            'search' => $request->string('search')->toString() ?: null,
+            'level'           => $request->string('level')->toString() ?: null,
+            'year'            => $request->integer('year') ?: null,
+            'year_type'       => $request->string('year_type')->toString() ?: null,
+            'search'          => $request->string('search')->toString() ?: null,
+            'strategy_id'     => $request->integer('strategy_id') ?: null,
+            'sub_strategy_id' => $request->integer('sub_strategy_id') ?: null,
+            'category_id'     => $request->integer('category_id') ?: null,
+            'kpi_main_id'     => $request->integer('kpi_main_id') ?: null,
         ];
 
         // แสดงเฉพาะตัวชี้วัดในระดับที่ผู้ใช้เป็นผู้ดูแลเท่านั้น
         $indicators = $this->indicators->paginateManageableLevels(array_filter($filters), $request->user());
         $years = $this->strategies->availableYears();
 
-        return view('indicators.index', compact('indicators', 'years', 'filters'));
+        // Dropdown สำหรับค้นหา (cascading: ยุทธศาสตร์ → กลยุทธ์ → หมวด KPI → KPI หลัก)
+        $strategies   = KpiStrategy::orderByDesc('year')->orderBy('orderby')->get();
+        $subStrategies = KpiSubStrategy::query()
+            ->when($filters['strategy_id'], fn ($q) => $q->where('strategy_id', $filters['strategy_id']))
+            ->orderBy('orderby')->get();
+        $categories = KpiCategory::query()
+            ->when($filters['sub_strategy_id'], fn ($q) => $q->where('sub_strategy_id', $filters['sub_strategy_id']))
+            ->orderBy('orderby')->get();
+        $mains = KpiMain::query()
+            ->when($filters['category_id'], fn ($q) => $q->where('category_id', $filters['category_id']))
+            ->orderBy('orderby')->get();
+
+        return view('indicators.index', compact('indicators', 'years', 'filters', 'strategies', 'subStrategies', 'categories', 'mains'));
     }
 
     public function create(Request $request): View

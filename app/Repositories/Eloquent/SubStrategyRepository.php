@@ -17,13 +17,14 @@ class SubStrategyRepository extends BaseRepository implements SubStrategyReposit
         return new KpiSubStrategy;
     }
 
-    public function paginateFiltered(?int $year, ?int $strategyId, ?User $user = null, int $perPage = 20): LengthAwarePaginator
+    public function paginateFiltered(?int $year, ?int $strategyId, ?string $level = null, ?User $user = null, int $perPage = 20): LengthAwarePaginator
     {
         return $this->query()
             ->with(['strategy', 'reviewers'])
             ->withCount('indicators')
             ->when($strategyId, fn ($q) => $q->where('strategy_id', $strategyId))
             ->when($year, fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where('year', $year)))
+            ->when($level, fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where('level', $level)))
             // กลยุทธ์สืบทอดระดับ+ปีจากยุทธศาสตร์แม่ — ผู้ดูแลรายระดับเห็นเฉพาะระดับ+ปีที่ตนรับผิดชอบ
             ->when($user && ! $user->canManageAllIndicatorLevels(),
                 fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where(function ($w) use ($user) {

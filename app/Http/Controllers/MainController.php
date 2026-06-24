@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\MainRequest;
 use App\Models\KpiCategory;
 use App\Models\KpiMain;
+use App\Models\KpiStrategy;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Contracts\MainRepositoryInterface;
+use App\Repositories\Contracts\StrategyRepositoryInterface;
+use App\Repositories\Contracts\SubStrategyRepositoryInterface;
 use App\Support\IndicatorScopeFilter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +21,8 @@ class MainController extends Controller implements HasMiddleware
     public function __construct(
         private readonly MainRepositoryInterface $mains,
         private readonly CategoryRepositoryInterface $categories,
+        private readonly StrategyRepositoryInterface $strategies,
+        private readonly SubStrategyRepositoryInterface $subStrategies,
     ) {}
 
     public static function middleware(): array
@@ -38,10 +43,62 @@ class MainController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $categoryId = $request->integer('category_id') ?: null;
-        $mains = $this->mains->paginateFiltered($categoryId, $request->user());
+        $year          = $request->integer('year') ?: null;
+        $level         = $request->string('level')->toString() ?: null;
+        $strategyId    = $request->integer('strategy_id') ?: null;
+        $subStrategyId = $request->integer('sub_strategy_id') ?: null;
+        $categoryId    = $request->integer('category_id') ?: null;
+        $name          = $request->string('name')->trim()->toString() ?: null;
 
-        return view('mains.index', array_merge($this->formData($request), compact('mains', 'categoryId')));
+        $mains = $this->mains->paginateFiltered($year, $strategyId, $subStrategyId, $categoryId, $level, $name, $request->user());
+
+        $user = $request->user();
+        $years = $this->strategies->availableYears();
+        $levelOptions = KpiStrategy::LEVELS;
+
+        // ยุทธศาสตร์: กรองตามปี+ระดับที่เลือก (+ scope ผู้ใช้)
+        $strategyOptions = $this->strategies->query()
+            ->when(! $user->canManageAllIndicatorLevels(),
+                fn ($q) => $q->where(function ($w) use ($user) {
+                    $w->whereRaw('1 = 0');
+                    IndicatorScopeFilter::orWhereScopes($w, $user->indicatorAdminScopeYears());
+                }))
+            ->when($year,  fn ($q) => $q->where('year', $year))
+            ->when($level, fn ($q) => $q->where('level', $level))
+            ->orderByDesc('year')->orderBy('orderby')->get();
+
+        // กลยุทธ์: กรองตามยุทธศาสตร์+ปี+ระดับที่เลือก (+ scope ผู้ใช้)
+        $subStrategyOptions = $this->subStrategies->query()
+            ->with('strategy')
+            ->when(! $user->canManageAllIndicatorLevels(),
+                fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where(function ($w) use ($user) {
+                    $w->whereRaw('1 = 0');
+                    IndicatorScopeFilter::orWhereScopes($w, $user->indicatorAdminScopeYears());
+                })))
+            ->when($strategyId, fn ($q) => $q->where('strategy_id', $strategyId))
+            ->when($year,  fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where('year', $year)))
+            ->when($level, fn ($q) => $q->whereHas('strategy', fn ($s) => $s->where('level', $level)))
+            ->orderBy('orderby')->get();
+
+        // หมวด KPI: กรองตามกลยุทธ์+ยุทธศาสตร์+ปี+ระดับที่เลือก (+ scope ผู้ใช้)
+        $categoryOptions = $this->categories->query()
+            ->with('subStrategy.strategy')
+            ->when(! $user->canManageAllIndicatorLevels(),
+                fn ($q) => $q->whereHas('subStrategy.strategy', fn ($s) => $s->where(function ($w) use ($user) {
+                    $w->whereRaw('1 = 0');
+                    IndicatorScopeFilter::orWhereScopes($w, $user->indicatorAdminScopeYears());
+                })))
+            ->when($subStrategyId, fn ($q) => $q->where('sub_strategy_id', $subStrategyId))
+            ->when($strategyId, fn ($q) => $q->whereHas('subStrategy', fn ($s) => $s->where('strategy_id', $strategyId)))
+            ->when($year,  fn ($q) => $q->whereHas('subStrategy.strategy', fn ($s) => $s->where('year', $year)))
+            ->when($level, fn ($q) => $q->whereHas('subStrategy.strategy', fn ($s) => $s->where('level', $level)))
+            ->orderBy('orderby')->get();
+
+        return view('mains.index', compact(
+            'mains', 'years', 'year', 'level', 'name',
+            'strategyId', 'subStrategyId', 'categoryId',
+            'strategyOptions', 'subStrategyOptions', 'categoryOptions', 'levelOptions'
+        ));
     }
 
     public function create(Request $request): View
@@ -141,6 +198,9 @@ class MainController extends Controller implements HasMiddleware
             ->orderBy('orderby')
             ->get();
 
-        return ['categoryOptions' => $categoryOptions];
+        return [
+            'categoryOptions' => $categoryOptions,
+            'levelOptions'    => KpiStrategy::LEVELS,
+        ];
     }
 }

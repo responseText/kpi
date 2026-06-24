@@ -4,24 +4,39 @@
     $strategyYears = $strategyOptions->pluck('year')->filter()->unique()->sortDesc()->values();
 @endphp
 
-{{-- กรองยุทธศาสตร์ตามปี — เลือกปีเพื่อให้ช่อง "ยุทธศาสตร์" แสดงเฉพาะของปีที่เลือก --}}
-<div class="mb-4">
-    <label for="ss-year-filter" class="mb-1 block text-sm font-medium text-slate-700">ปี (กรองยุทธศาสตร์)</label>
-    <select id="ss-year-filter"
-        class="w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:max-w-xs">
-        <option value="">— ทุกปี —</option>
-        @foreach ($strategyYears as $y)
-            <option value="{{ $y }}">{{ $y }}</option>
-        @endforeach
-    </select>
-    <p class="mt-1 text-xs text-slate-400">เลือกปีเพื่อแสดงเฉพาะยุทธศาสตร์ของปีที่เลือกในช่องด้านล่าง</p>
+{{-- กรองยุทธศาสตร์ตามระดับ+ปี --}}
+<div class="mb-4 flex flex-wrap items-end gap-4">
+    <div>
+        <label for="ss-level-filter" class="mb-1 block text-sm font-medium text-slate-700">ระดับตัวชี้วัด</label>
+        <select id="ss-level-filter"
+            class="w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-48">
+            <option value="">— ทุกระดับ —</option>
+            @foreach ($levelOptions as $code => $label)
+                <option value="{{ $code }}">{{ $label }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div>
+        <label for="ss-year-filter" class="mb-1 block text-sm font-medium text-slate-700">ปี</label>
+        <select id="ss-year-filter"
+            class="w-full rounded-lg border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-32">
+            <option value="">— ทุกปี —</option>
+            @foreach ($strategyYears as $y)
+                <option value="{{ $y }}">{{ $y }}</option>
+            @endforeach
+        </select>
+    </div>
+    <p class="text-xs text-slate-400">เลือกระดับ/ปี เพื่อกรองรายการยุทธศาสตร์ด้านล่าง</p>
 </div>
 
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <x-form.select name="strategy_id" label="ยุทธศาสตร์" :required="true">
         <option value="">— เลือกยุทธศาสตร์ —</option>
         @foreach ($strategyOptions as $opt)
-            <option value="{{ $opt->id }}" data-year="{{ $opt->year }}" @selected(old('strategy_id', $ss->strategy_id ?? '') == $opt->id)>
+            <option value="{{ $opt->id }}"
+                data-year="{{ $opt->year }}"
+                data-level="{{ $opt->level }}"
+                @selected(old('strategy_id', $ss->strategy_id ?? '') == $opt->id)>
                 [{{ $opt->year }} · {{ $opt->level_label }}] {{ $opt->name }}
             </option>
         @endforeach
@@ -57,29 +72,38 @@
 @push('scripts')
     <script>
         (function () {
-            const filter = document.getElementById('ss-year-filter');
-            const sel = document.getElementById('strategy_id');
-            if (!filter || !sel) return;
+            const levelFilter = document.getElementById('ss-level-filter');
+            const yearFilter  = document.getElementById('ss-year-filter');
+            const sel         = document.getElementById('strategy_id');
+            if (!levelFilter || !yearFilter || !sel) return;
 
-            // แสดงเฉพาะยุทธศาสตร์ของปีที่เลือก (ค่าว่าง = ทุกปี)
             function apply() {
-                const year = filter.value;
+                const level = levelFilter.value;
+                const year  = yearFilter.value;
                 let hideSelected = false;
+
                 Array.from(sel.options).forEach(opt => {
-                    if (!opt.value) return; // คงตัวเลือก placeholder ไว้
-                    const match = !year || opt.dataset.year === year;
-                    opt.hidden = !match;
+                    if (!opt.value) return; // placeholder
+                    const matchLevel = !level || opt.dataset.level === level;
+                    const matchYear  = !year  || opt.dataset.year  === year;
+                    const match = matchLevel && matchYear;
+                    opt.hidden   = !match;
                     opt.disabled = !match;
                     if (!match && opt.selected) hideSelected = true;
                 });
-                if (hideSelected) sel.value = ''; // ถ้าตัวที่เลือกถูกซ่อน ให้รีเซ็ต
+
+                if (hideSelected) sel.value = '';
             }
 
-            // โหมดแก้ไข/หลัง validation: ตั้งปีให้ตรงกับยุทธศาสตร์ที่เลือกอยู่
+            // โหมดแก้ไข: ตั้งระดับ+ปีให้ตรงกับยุทธศาสตร์ที่เลือกอยู่
             const current = sel.options[sel.selectedIndex];
-            if (current && current.value && current.dataset.year) filter.value = current.dataset.year;
+            if (current && current.value) {
+                if (current.dataset.level) levelFilter.value = current.dataset.level;
+                if (current.dataset.year)  yearFilter.value  = current.dataset.year;
+            }
 
-            filter.addEventListener('change', apply);
+            levelFilter.addEventListener('change', apply);
+            yearFilter.addEventListener('change', apply);
             apply();
         })();
     </script>
