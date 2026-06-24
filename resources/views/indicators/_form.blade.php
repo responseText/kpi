@@ -51,21 +51,93 @@
             <option value="{{ $key }}" @selected(old('level', $ind->level ?? 'hospital') === $key)>{{ $name }}</option>
         @endforeach
     </x-form.select>
-    <x-form.select name="kpi_main_id" label="KPI หลัก (ภายใต้หมวด KPI)" :required="true">
-        <option value="">— เลือก KPI หลัก —</option>
-        @foreach ($mainsByCategory as $categoryName => $mains)
-            <optgroup label="{{ $categoryName }}">
-                @foreach ($mains as $opt)
-                    <option value="{{ $opt->id }}"
-                        data-year="{{ $opt->category?->subStrategy?->strategy?->year }}"
-                        data-level="{{ $opt->category?->subStrategy?->strategy?->level }}"
-                        @selected(old('kpi_main_id', $ind->kpi_main_id ?? '') == $opt->id)>
-                        {{ $opt->code ? '['.$opt->code.'] ' : '' }}{{ $opt->name }}
-                    </option>
-                @endforeach
-            </optgroup>
-        @endforeach
-    </x-form.select>
+    {{-- KPI หลัก — premium searchable combobox --}}
+    @php
+        $selectedMainId = old('kpi_main_id', $ind->kpi_main_id ?? '');
+        $selectedMainLabel = null;
+        $selectedMainYear = null;
+        foreach ($mainsByCategory as $catName => $catMains) {
+            foreach ($catMains as $optItem) {
+                if ((string) $optItem->id === (string) $selectedMainId) {
+                    $selectedMainLabel = ($optItem->code ? '['.$optItem->code.'] ' : '').$optItem->name;
+                    $selectedMainYear = $optItem->category?->subStrategy?->strategy?->year;
+                }
+            }
+        }
+    @endphp
+    <div>
+        <label for="ind-main-trigger" class="mb-1 block text-sm font-medium text-slate-700">
+            KPI หลัก (ภายใต้หมวด KPI) <span class="text-red-500">*</span>
+        </label>
+
+        <div id="ind-main-combobox" class="relative">
+            {{-- ค่าจริงที่ส่งฟอร์ม --}}
+            <input type="hidden" name="kpi_main_id" id="kpi_main_id" value="{{ $selectedMainId }}">
+
+            {{-- Trigger --}}
+            <button type="button" id="ind-main-trigger" aria-haspopup="listbox" aria-expanded="false"
+                class="flex w-full items-center justify-between gap-2 rounded-xl border bg-white px-3.5 py-2.5 text-left text-sm shadow-sm transition hover:border-slate-300 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 {{ $errors->has('kpi_main_id') ? 'border-red-400' : 'border-slate-300' }}">
+                <span id="ind-main-trigger-label" class="truncate {{ $selectedMainLabel ? 'text-slate-800' : 'text-slate-400' }}">
+                    {{ $selectedMainLabel ?? '— เลือก KPI หลัก —' }}
+                </span>
+                <svg id="ind-main-chevron" class="h-4 w-4 shrink-0 text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+            </button>
+
+            {{-- Panel --}}
+            <div id="ind-main-panel" class="absolute z-30 mt-1.5 hidden w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
+
+                {{-- Search --}}
+                <div class="border-b border-slate-100 bg-slate-50/80 p-2">
+                    <div class="relative">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                            </svg>
+                        </div>
+                        <input id="ind-main-search" type="text" autocomplete="off"
+                            placeholder="พิมพ์ชื่อ KPI หลัก เพื่อค้นหา..."
+                            class="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-16 text-sm placeholder:text-slate-400 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100">
+                        <span id="ind-main-count" class="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[11px] text-slate-400"></span>
+                    </div>
+                </div>
+
+                {{-- Options --}}
+                <ul id="ind-main-list" role="listbox" class="thin-scroll max-h-64 overflow-y-auto py-1">
+                    @foreach ($mainsByCategory as $categoryName => $mains)
+                        @php $groupKey = 'g'.$loop->index; @endphp
+                        <li data-group-header="{{ $groupKey }}"
+                            class="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                            {{ $categoryName }}
+                        </li>
+                        @foreach ($mains as $opt)
+                            @php $label = ($opt->code ? '['.$opt->code.'] ' : '').$opt->name; @endphp
+                            <li role="option"
+                                data-value="{{ $opt->id }}"
+                                data-group="{{ $groupKey }}"
+                                data-year="{{ $opt->category?->subStrategy?->strategy?->year }}"
+                                data-level="{{ $opt->category?->subStrategy?->strategy?->level }}"
+                                data-label="{{ $label }}"
+                                data-search="{{ \Illuminate\Support\Str::lower($label.' '.$categoryName) }}"
+                                @if ((string) $opt->id === (string) $selectedMainId) aria-selected="true" @endif
+                                class="group flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition hover:bg-indigo-50 {{ (string) $opt->id === (string) $selectedMainId ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-700' }}">
+                                <svg class="h-4 w-4 shrink-0 text-indigo-600 {{ (string) $opt->id === (string) $selectedMainId ? '' : 'invisible' }}" data-check
+                                    fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                <span class="truncate">{{ $label }}</span>
+                            </li>
+                        @endforeach
+                    @endforeach
+                    <li id="ind-main-empty" hidden class="px-3 py-6 text-center text-sm text-slate-400">
+                        ไม่พบ KPI หลัก ที่ตรงกับการค้นหา
+                    </li>
+                </ul>
+            </div>
+        </div>
+        @error('kpi_main_id')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+    </div>
 </div>
 
 {{-- ปีที่ derive จาก KPI หลัก (แสดงผลเท่านั้น ไม่มี input) --}}
@@ -198,46 +270,95 @@
 </div>
 
 @push('scripts')
-{{-- Cascade: กรอง KPI หลัก ตาม ปี (helper) + ระดับตัวชี้วัด (submitted) --}}
+{{-- Cascade + Search combobox: กรอง KPI หลัก ตาม ปี + ระดับ + ข้อความค้นหา --}}
 <script>
 (function () {
-    const yearFilter = document.getElementById('ind-year-filter');
-    const levelSel   = document.querySelector('select[name="level"]');
-    const mainSel    = document.getElementById('kpi_main_id');
-    const yearInfo   = document.getElementById('ind-year-info');
-    const yearValue  = document.getElementById('ind-year-value');
-    if (!yearFilter || !levelSel || !mainSel) return;
+    const yearFilter   = document.getElementById('ind-year-filter');
+    const levelSel     = document.querySelector('select[name="level"]');
+    const combobox     = document.getElementById('ind-main-combobox');
+    const hiddenInput  = document.getElementById('kpi_main_id');
+    const trigger      = document.getElementById('ind-main-trigger');
+    const triggerLabel = document.getElementById('ind-main-trigger-label');
+    const chevron      = document.getElementById('ind-main-chevron');
+    const panel        = document.getElementById('ind-main-panel');
+    const searchInput  = document.getElementById('ind-main-search');
+    const mainCount    = document.getElementById('ind-main-count');
+    const emptyMsg     = document.getElementById('ind-main-empty');
+    const yearInfo     = document.getElementById('ind-year-info');
+    const yearValue    = document.getElementById('ind-year-value');
+    if (!yearFilter || !levelSel || !combobox || !hiddenInput) return;
 
+    const items   = Array.from(panel.querySelectorAll('li[role="option"]'));
+    const headers = Array.from(panel.querySelectorAll('li[data-group-header]'));
+    const PLACEHOLDER = '— เลือก KPI หลัก —';
+
+    function selectedItem() {
+        return items.find(li => li.dataset.value === hiddenInput.value) || null;
+    }
+
+    // กรองรายการตาม ปี + ระดับ + ข้อความค้นหา
     function applyMains() {
-        const year  = yearFilter.value;
-        const level = levelSel.value;
-        let hideSelected = false;
+        const year   = yearFilter.value;
+        const level  = levelSel.value;
+        const search = (searchInput ? searchInput.value.toLowerCase().trim() : '');
+        let visibleCount = 0;
+        let clearedSelection = false;
 
-        mainSel.querySelectorAll('option[value]').forEach(opt => {
-            if (!opt.value) return;
-            const match = (!year  || opt.dataset.year  === year) &&
-                          (!level || opt.dataset.level === level);
-            opt.hidden   = !match;
-            opt.disabled = !match;
-            if (!match && opt.selected) hideSelected = true;
+        items.forEach(li => {
+            const matchYear   = !year   || li.dataset.year  === year;
+            const matchLevel  = !level  || li.dataset.level === level;
+            const matchSearch = !search || (li.dataset.search || '').includes(search);
+            const match = matchYear && matchLevel && matchSearch;
+            li.hidden = !match;
+            if (match) visibleCount++;
+            // ถ้ารายการที่เลือกถูกซ่อนจากตัวกรอง (ปี/ระดับ) → ล้างค่า
+            if (!match && (!search) && li.dataset.value === hiddenInput.value) {
+                clearedSelection = true;
+            }
         });
-        if (hideSelected) {
-            mainSel.value = '';
-            updateYearInfo();
+
+        if (clearedSelection) setValue('', null);
+
+        // ซ่อนหัวข้อกลุ่มที่ไม่มีรายการแสดง
+        headers.forEach(h => {
+            const key = h.dataset.groupHeader;
+            const hasVisible = items.some(li => li.dataset.group === key && !li.hidden);
+            h.hidden = !hasVisible;
+        });
+
+        if (emptyMsg) emptyMsg.hidden = visibleCount > 0;
+        if (mainCount) mainCount.textContent = visibleCount > 0 ? (visibleCount + ' ตัวเลือก') : 'ไม่พบ';
+    }
+
+    // ตั้งค่าที่เลือก + อัปเดต UI
+    function setValue(value, li) {
+        hiddenInput.value = value;
+        items.forEach(o => {
+            const isSel = o.dataset.value === value && value !== '';
+            o.setAttribute('aria-selected', isSel ? 'true' : 'false');
+            o.classList.toggle('bg-indigo-50', isSel);
+            o.classList.toggle('text-indigo-700', isSel);
+            o.classList.toggle('font-medium', isSel);
+            o.classList.toggle('text-slate-700', !isSel);
+            const check = o.querySelector('[data-check]');
+            if (check) check.classList.toggle('invisible', !isSel);
+        });
+        if (value && li) {
+            triggerLabel.textContent = li.dataset.label;
+            triggerLabel.classList.remove('text-slate-400');
+            triggerLabel.classList.add('text-slate-800');
+        } else {
+            triggerLabel.textContent = PLACEHOLDER;
+            triggerLabel.classList.add('text-slate-400');
+            triggerLabel.classList.remove('text-slate-800');
         }
-
-        // ซ่อน optgroup ที่ไม่มี option ที่มองเห็น
-        mainSel.querySelectorAll('optgroup').forEach(og => {
-            const hasVisible = Array.from(og.querySelectorAll('option')).some(o => !o.hidden && o.value);
-            og.hidden   = !hasVisible;
-            og.disabled = !hasVisible;
-        });
+        updateYearInfo();
     }
 
     function updateYearInfo() {
         if (!yearInfo || !yearValue) return;
-        const opt  = mainSel.options[mainSel.selectedIndex];
-        const year = (opt && opt.value) ? opt.dataset.year : null;
+        const li   = selectedItem();
+        const year = li ? li.dataset.year : null;
         if (year) {
             yearInfo.className = 'mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-indigo-50 text-indigo-700';
             yearValue.textContent = year;
@@ -249,17 +370,55 @@
         }
     }
 
-    // โหมดแก้ไข: ตั้งปีกรองจาก KPI หลัก ที่เลือกอยู่
-    const current = mainSel.options[mainSel.selectedIndex];
-    if (current && current.value && current.dataset.year) {
-        yearFilter.value = current.dataset.year;
+    // เปิด/ปิด panel
+    function openPanel() {
+        panel.classList.remove('hidden');
+        trigger.setAttribute('aria-expanded', 'true');
+        chevron.classList.add('rotate-180');
+        applyMains();
+        if (searchInput) { searchInput.focus(); }
     }
+    function closePanel() {
+        panel.classList.add('hidden');
+        trigger.setAttribute('aria-expanded', 'false');
+        chevron.classList.remove('rotate-180');
+    }
+    function togglePanel() {
+        panel.classList.contains('hidden') ? openPanel() : closePanel();
+    }
+
+    // events
+    trigger.addEventListener('click', togglePanel);
+
+    items.forEach(li => li.addEventListener('click', () => {
+        setValue(li.dataset.value, li);
+        if (searchInput) searchInput.value = '';
+        closePanel();
+    }));
+
+    if (searchInput) searchInput.addEventListener('input', applyMains);
+
+    // ปิดเมื่อคลิกนอกกล่อง
+    document.addEventListener('click', (e) => {
+        if (!combobox.contains(e.target)) closePanel();
+    });
+    // ปิดด้วย Esc
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !panel.classList.contains('hidden')) {
+            closePanel();
+            trigger.focus();
+        }
+    });
 
     yearFilter.addEventListener('change', applyMains);
     levelSel.addEventListener('change',   applyMains);
-    mainSel.addEventListener('change',    updateYearInfo);
+
+    // โหมดแก้ไข: ตั้งปีกรองจากรายการที่เลือกอยู่
+    const sel = selectedItem();
+    if (sel && sel.dataset.year) yearFilter.value = sel.dataset.year;
 
     applyMains();
+    updateYearInfo();
 })();
 </script>
 
