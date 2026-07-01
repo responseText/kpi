@@ -122,7 +122,7 @@ class PermissionRepository implements PermissionRepositoryInterface
         // (เฉพาะผู้ดูแลระบบสูงสุด ควบคุมด้วยบทบาท ไม่ใช่สิทธิ์รายเมนู) เพราะไม่ต้องกำหนดสิทธิ์รายผู้ใช้
         return Menu::system($system)
             ->whereNull('parent_id')
-            ->whereNotIn('code', ['kpi.dashboard', 'kpi.user', 'kpi.unit'])
+            ->whereNotIn('code', ['kpi.dashboard', 'kpi.user', 'kpi.unit', 'kpi.import'])
             ->orderBy('orderby')
             ->get();
     }

@@ -57,6 +57,10 @@ class PermissionService
                 if ($m->code === 'kpi.unit') {
                     return $user->canManageUnits();
                 }
+                // นำเข้าข้อมูล (Excel): เฉพาะผู้ดูแลระบบสูงสุด/ผู้ดูแลตัวชี้วัดทั้งหมด
+                if ($m->code === 'kpi.import') {
+                    return $user->isTopAdmin();
+                }
                 // ยุทธศาสตร์ + กลยุทธ์ + ตัวชี้วัด + กำหนดค่าเป้าหมาย:
                 // เฉพาะผู้ดูแลตัวชี้วัด (ทุกระดับ/ทั้งหมด/รายระดับ) — เนื้อหาถูกสโคปตามระดับอีกชั้นในแต่ละหน้า
                 if (in_array($m->code, ['kpi.strategy', 'kpi.sub_strategy', 'kpi.category', 'kpi.main', 'kpi.indicator', 'kpi.target'], true)) {

@@ -25,6 +25,7 @@ class MenuSeeder extends Seeder
             ['code' => 'kpi.result', 'name' => 'บันทึกผลงาน', 'route' => 'results.index', 'icon' => 'result'],
             ['code' => 'kpi.level_manager', 'name' => 'ผู้รับผิดชอบระดับ', 'route' => 'level-managers.index', 'icon' => 'level'],
             ['code' => 'kpi.report', 'name' => 'รายงานสรุปผล', 'route' => 'reports.index', 'icon' => 'report'],
+            ['code' => 'kpi.import', 'name' => 'นำเข้าข้อมูล (Excel)', 'route' => 'imports.index', 'icon' => 'import'],
             ['code' => 'kpi.permission', 'name' => 'สิทธิ์ผู้ใช้งาน', 'route' => 'permissions.index', 'icon' => 'permission'],
             ['code' => 'kpi.user', 'name' => 'จัดการผู้ใช้งาน', 'route' => 'users.index', 'icon' => 'user'],
         ];

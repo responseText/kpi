@@ -6,6 +6,7 @@
  */
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\IndicatorController;
 use App\Http\Controllers\LevelManagerController;
 use App\Http\Controllers\MainController;
@@ -66,6 +67,11 @@ Route::resource('units', UnitController::class)
 
 // รายงาน
 Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+
+// นำเข้าข้อมูล (Excel) — เฉพาะผู้ดูแลระบบสูงสุด/ผู้ดูแลตัวชี้วัดทั้งหมด
+Route::get('imports', [ImportController::class, 'index'])->name('imports.index');
+Route::get('imports/{type}/template', [ImportController::class, 'template'])->name('imports.template');
+Route::post('imports/{type}', [ImportController::class, 'store'])->name('imports.store');
 
 // สิทธิ์ผู้ใช้งาน
 Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
